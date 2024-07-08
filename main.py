@@ -3,12 +3,13 @@ import pandas as pd
 import sys
 import argparse
 from dataset.preparation import Cleaner 
-from utils.args import data_cleaning_args
+from utils.args import data_cleaning_args, mutation
 from dataset.processing import process_molecules_and_calculate_descriptors
 
 def parser_args():
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     data_cleaning_args(parser)
+    #mutation(parser)
     parser.add_argument('--path', type = str, default = '/home/federica/chembl1865/chembl1865.csv', help = 'Specify the path of the data')
     print(parser.parse_args())
     return parser.parse_args()
@@ -35,8 +36,8 @@ def main():
     cleaner = Cleaner(args, copy) # Cleaner class is defined in dataset/preparation.py for data cleaning
     cleaned_data = cleaner.clean_data(copy) # clean_data method is defined in Cleaner class to call all the data cleaning methods
 
-    df=process_molecules_and_calculate_descriptors(cleaned_data) # process_molecule_with_logging is defined in dataset/processing.py to process the molecules and calculate the descriptors
-    print(df)
+    #df=process_molecules_and_calculate_descriptors(cleaned_data) # process_molecule_with_logging is defined in dataset/processing.py to process the molecules and calculate the descriptors
+    #print(df)
 
 if __name__ == '__main__':
     main()

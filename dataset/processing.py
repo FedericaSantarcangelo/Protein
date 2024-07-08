@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Apr  5 11:48:09 2024
-
-@author: leonardo
-"""
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, Descriptors3D
@@ -12,13 +5,14 @@ from rdkit.Chem.SaltRemover import SaltRemover
 from rdkit.ML.Descriptors import MoleculeDescriptors
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from mordred import Calculator, descriptors
-from multiprocessing import Pool #mpy 
 import pandas as pd
 import numpy as np
 
 # Initialize the RDKit and Mordred descriptor calculators globally
-descriptor_names = [d[0] for d in Descriptors._descList]
-rdkit_calculator = MoleculeDescriptors.MolecularDescriptorCalculator(descriptor_names)
+exclude_descriptors = ['BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
+filtered_descriptors = [desc for desc in Descriptors._descList if desc[0] not in exclude_descriptors]
+rdkit_calculator = MoleculeDescriptors.MolecularDescriptorCalculator([desc[0] for desc in filtered_descriptors])
+
 mordred_calculator = Calculator(descriptors, ignore_3D=False)
 
 # Initialize Descriptors3D
@@ -26,7 +20,6 @@ descriptor_functions = {name: func for name, func in Descriptors3D.__dict__.item
 
 def prepare_molecule(smiles): #singolo smiles e non multiplo 
 
-    print(f"first:{smiles}")
     mol = Chem.MolFromSmiles(smiles, sanitize=True)
     if mol is None:
         return None
@@ -41,14 +34,12 @@ def prepare_molecule(smiles): #singolo smiles e non multiplo
     AllChem.MMFFOptimizeMolecule(mol)
     un = rdMolStandardize.Uncharger()
     mol=un.uncharge(mol)
-    print(f"Second:{Chem.MolToSmiles(mol)}")
     return mol
 
 
 def calculate_rdkit_descriptors(mol):
     if mol:
-        return rdkit_calculator.CalcDescriptors(mol)
-    return [np.nan] * len(descriptor_names)
+        return [np.nan] * len(filtered_descriptors)
 
 def calculate_rdkit_3d_descriptors(mol):
     if mol and mol.GetNumConformers() > 0:
@@ -67,8 +58,8 @@ def calculate_mordred_descriptors(mol):
         return list(mordred_desc.fill_missing(np.nan).values())
     return [np.nan] * len(mordred_calculator.descriptors)
 
-def process_molecule_with_logging(data):
-    mol_id, smiles = data
+def process_molecule_with_logging(mol_id, smiles):
+ 
     try:
         mol2 = prepare_molecule(smiles)
         if mol2 is None:
@@ -82,20 +73,18 @@ def process_molecule_with_logging(data):
         return mol_id, combined_descriptors
     except Exception as e:
         print(f"Error processing molecule {mol_id}: {e}")
-        total_descriptor_count = len(descriptor_names) + len(descriptor_functions) + len(mordred_calculator.descriptors)
+        total_descriptor_count = len(filtered_descriptors) + len(descriptor_functions) + len(mordred_calculator.descriptors)
         return mol_id, [np.nan] * total_descriptor_count
 
-def process_molecules_and_calculate_descriptors(df, n_cpus=12):
+def process_molecules_and_calculate_descriptors(df):
     smiles_dict = df.set_index('Molecule ChEMBL ID')['Smiles'].to_dict()
 
-##################################
-    with Pool(n_cpus) as pool:
-        results = pool.map(process_molecule_with_logging, smiles_dict.items())
+    results = process_molecule_with_logging(df['Molecule ChEMBL ID'], df['Smiles'])
 
-    valid_results = [result for result in results if not all(x is np.nan for x in result[1])]
+    valid_results = [result for result in results if not np.isnan(result[1])]
 
     # Add prefixes to descriptor names
-    rdkit_descriptor_cols = ['rdkit_' + name for name in descriptor_names]
+    rdkit_descriptor_cols = ['rdkit_' + name for name in filtered_descriptors]
     rdkit_3d_descriptor_cols = ['rdkit_3d_' + name for name in sorted(descriptor_functions)]
     mordred_descriptor_cols = ['mordred_' + str(d) for d in mordred_calculator.descriptors]
 

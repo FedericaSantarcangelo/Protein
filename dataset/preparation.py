@@ -1,9 +1,11 @@
 import pandas as pd
 import os
 import numpy as np
-from argparse import Namespace
-from utils.args import *
+from argparse import Namespace, ArgumentParser
+from utils.args import data_cleaning_args
 import re
+from mutations import Mutation
+import ast
 
 def get_parser() -> ArgumentParser:
     """ Get the parser """
@@ -24,10 +26,12 @@ class Cleaner():
         data = self.remove_row(data)
         data = self.filter_data(data)
         data = self.remove_salts(data)
+        mutation = Mutation(self.args, data) #il return di mutation è il dataframe per poi rimuovere i duplicati, gli args devono essere quelli relativi alla mutation
+        #data = mutation.funzione(data)
         data = self.remove_duplicate(data)
         
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
-        directory_path = os.path.dirname(self.args.path)
+        directory_path = '/home/federica/'
         self.save_data_report(directory_path, data_report, whole_dataset, whole_act, whole_inact, inc_data)
         
         return data
@@ -168,47 +172,59 @@ class Cleaner():
         data['Smiles'] = cleaned_smiles
         return data
     
-    ####################################################DA GENERALIZZARE####################################################
-    
-    def remove_duplicate(self, data: pd.DataFrame) -> pd.DataFrame:
-        """ Remove the duplicates from the data based on the 'Molecule ChEMBL ID'
+    def remove_duplicate(self, data: pd.DataFrame) -> pd.DataFrame: 
+        """ Remove duplicate appling a priority to the data
             :param data: the data
-            :return: the data without duplicates
+            :return: the filtered data
         """
-        # Identifica i duplicati basandoti su 'Molecule ChEMBL ID'
-        duplicates = data.duplicated(subset='Molecule ChEMBL ID', keep=False)
 
-    # Filtra il DataFrame per mantenere solo i duplicati
+        rel_pri = ast.literal_eval(self.args.rel_pri)
+        for key in list(rel_pri.keys()):
+            new_key = f"'{key}'"
+            rel_pri[new_key] = rel_pri.pop(key)
+            
+        sty_pri = ast.literal_eval(self.args.sty_pri)
+        src_pri = ast.literal_eval(self.args.src_pri)
+
+        duplicates = data.duplicated(subset='Molecule ChEMBL ID', keep=False)
         duplicate_data = data[duplicates]
 
-    # Ordina i duplicati in base ai criteri di scelta
-    # e altri criteri che desideri utilizzare
-        rel_pri={"'='":1,"'=<'":2,"'>='":3,"'>'":4,"'<'":5} #relation priority
-        #rel_pri=dict(zip(self.args.rel_priority[::2], map(int, self.args.rel_priority[1::2])))
+        def get_dominant_record(group):
+            """ get the dominant record in the group 
+                :param group: the group
+                :return: the dominant record
+            """
 
-        sty_pri={"IC50":1,"Ki":2,"Kd":3,"EC50":4,"Inhibition":5,"Activity":6} #standard type priority
-        #sty_pri=dict(zip(self.args.sty_priority[::2], map(int, self.args.sty_priority[1::2])))
-        src_pri={"Scientific Literature":1, "BindingDB Database":2,"Fraunhofer HDAC6":3} #source description priority
-        # Create a temporary DataFrame to calculate composite sort keys
-        temp_df = duplicate_data.copy()
-        temp_df['src_sort_key'] = temp_df['Source Description'].map(src_pri)
-        temp_df['sty_sort_key'] = temp_df['Standard Type'].map(sty_pri)
-        temp_df['rel_sort_key'] = temp_df['Standard Relation'].map(rel_pri)
-        # Sort the temporary DataFrame using the calculated sort keys
-        temp_df_sorted = temp_df.sort_values(by=['src_sort_key', 'sty_sort_key', 'rel_sort_key'], ascending=[True, False, False])
+            sty_counts = group['Standard Type'].value_counts()
 
-    # drop the temporary sort key columns if you want
-        duplicate_data_sorted = temp_df_sorted.drop(columns=['src_sort_key', 'sty_sort_key', 'rel_sort_key'])
+            dominant_sty = sty_counts.idxmax()
+            max_count = sty_counts.max()
 
-    # Rimuovi i duplicati, mantenendo la prima occorrenza dopo l'ordinamento
-        data_without_duplicates = duplicate_data_sorted.drop_duplicates(subset='Molecule ChEMBL ID', keep='first')
+            dominant_group = group[group['Standard Type'] == dominant_sty]
 
-    #  dati non duplicati con quelli da cui abbiamo rimosso i duplicati
-        non_duplicate_data = data[~duplicates]
-        final_data = pd.concat([non_duplicate_data, data_without_duplicates], ignore_index=True)
+            if len(dominant_group) == 1:
+                dominant_group['rel_sort_key'] = dominant_group['Standard Relation'].map(rel_pri)
+                dominant_group['src_sort_key'] = dominant_group['Source Description'].map(src_pri)
+                return dominant_group.iloc[:1]
+            
+            group['sty_sort_key'] = group['Standard Type'].map(sty_pri)
+            group['rel_sort_key'] = group['Standard Relation'].map(rel_pri)
+            group['src_sort_key'] = group['Source Description'].map(src_pri)
+
+            group_sorted = group.sort_values(by=['sty_sort_key', 'rel_sort_key', 'src_sort_key'], ascending=[True, True, True])
+            return group_sorted.iloc[:1]
+        
+        dominant_data = duplicate_data.groupby('Molecule ChEMBL ID').apply(get_dominant_record).reset_index(drop=True)
+        
+
+    # Seleziona i record da `data` che non hanno un ID in `dominant_ids`
+        duplicate_ids = duplicate_data['Molecule ChEMBL ID'].unique()
+        non_duplicate_data = data[~data['Molecule ChEMBL ID'].isin(duplicate_ids)]
+        final_data= pd.concat([non_duplicate_data, dominant_data], ignore_index=True)
 
         return final_data
-    
+
+
     def active_inactive(self, data: pd.DataFrame):
         """ Filter the data based on active and inactive values
             :param data: the data
@@ -224,9 +240,7 @@ class Cleaner():
             df_perc = data[data['Standard Type'].isin(p_type)]
             
         df_perc_rev_act = df_perc[df_perc['Standard Type'] == 'Activity']
-        df_perc_rev_act ['class'] = 0
         df_perc_rev_inact = df_perc[df_perc['Standard Type'] == 'Inhibition']
-        df_perc_rev_inact['class'] = 2
         df_perc_rev = df_perc_rev_inact.copy()
 
         #extrapolate data from these sets
@@ -242,11 +256,8 @@ class Cleaner():
 
         # Filter the data based on the 'Standard Value' and relation column for ACTIVATION
         df_act_rev_act = df_act[df_act['Standard Value'] <= self.args.thr_act]
-        df_act_rev_act['class'] = 0
         df_act_rev_inact = df_act[df_act['Standard Value'] >= self.args.thr_act*10]
-        df_act_rev_inact['class'] = 2
         df_act_rev_inc = df_act.loc[(df_act['Standard Value'] > self.args.thr_act) & (df_act['Standard Value'] < self.args.thr_act * 10)]
-        df_act_rev_inc['class'] = 1
         df_act_rev = pd.concat([df_act_rev_act, df_act_rev_inact])
 
         #extrapolate data from these sets
