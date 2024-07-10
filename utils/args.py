@@ -24,9 +24,8 @@ def data_cleaning_args(parser : ArgumentParser) -> None:
                         help="standard type priority")
     parser.add_argument('--src_pri', type=str, default="{'Scientific Literature':1, 'BindingDB Database':2, 'Fraunhofer HDAC6':3}",
                         help="source priority")
+    parser.add_argument('--path_uniprot', type = str, default = '/home/federica/df_uniprot_details.tsv', help = 'Specify the path of uniprot file')
     
-def mutation(parser : ArgumentParser) -> None:
-    """ Add arguments for mutation
-        :param parser: the parser istance
-    """
+        
+        
     

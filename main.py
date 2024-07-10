@@ -3,14 +3,14 @@ import pandas as pd
 import sys
 import argparse
 from dataset.preparation import Cleaner 
-from utils.args import data_cleaning_args, mutation
+from utils.args import data_cleaning_args
 from dataset.processing import process_molecules_and_calculate_descriptors
 
 def parser_args():
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     data_cleaning_args(parser)
     #mutation(parser)
-    parser.add_argument('--path', type = str, default = '/home/federica/chembl1865/chembl1865.csv', help = 'Specify the path of the data')
+    parser.add_argument('--path', type = str, default = '/home/federica/chembl1865/EGFR.csv', help = 'Specify the path of the data')
     print(parser.parse_args())
     return parser.parse_args()
 
@@ -21,7 +21,7 @@ def load_data(data_path):
         sys.exit(1)
     else:
          try:
-            data = pd.read_csv(data_path, sep=';')
+            data = pd.read_csv(data_path, sep=';', low_memory=False)
             return data
          except pd.errors.ParserError as e:
              print(f"ParserError: {e}")

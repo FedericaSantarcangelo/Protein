@@ -4,7 +4,7 @@ import numpy as np
 from argparse import Namespace, ArgumentParser
 from utils.args import data_cleaning_args
 import re
-from mutations import Mutation
+from dataset.mutations import Mutation
 import ast
 
 def get_parser() -> ArgumentParser:
@@ -27,7 +27,7 @@ class Cleaner():
         data = self.filter_data(data)
         data = self.remove_salts(data)
         mutation = Mutation(self.args, data) #il return di mutation è il dataframe per poi rimuovere i duplicati, gli args devono essere quelli relativi alla mutation
-        #data = mutation.funzione(data)
+        data = mutation.get_mutations(data.copy())
         data = self.remove_duplicate(data)
         
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
@@ -188,41 +188,43 @@ class Cleaner():
 
         duplicates = data.duplicated(subset='Molecule ChEMBL ID', keep=False)
         duplicate_data = data[duplicates]
+        unique_data = data[~duplicates] 
 
-        def get_dominant_record(group):
-            """ get the dominant record in the group 
-                :param group: the group
-                :return: the dominant record
-            """
+        g_dupl = duplicate_data.groupby('Molecule ChEMBL ID')
 
-            sty_counts = group['Standard Type'].value_counts()
+        indexes = [] #lista indici da tenere
 
-            dominant_sty = sty_counts.idxmax()
-            max_count = sty_counts.max()
+        for mol,grouper in g_dupl:
+            std_type_count = grouper['Standard Type'].value_counts()
+            dominant = std_type_count.idxmax()
 
-            dominant_group = group[group['Standard Type'] == dominant_sty]
+            grouper = grouper[grouper['Standard Type'] == dominant]
 
-            if len(dominant_group) == 1:
-                dominant_group['rel_sort_key'] = dominant_group['Standard Relation'].map(rel_pri)
-                dominant_group['src_sort_key'] = dominant_group['Source Description'].map(src_pri)
-                return dominant_group.iloc[:1]
+            if dominant:
+                grouper['Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
+                grouper['Source Description'] = grouper['Source Description'].map(src_pri)
+                grouper = grouper.sort_values(by=['Standard Relation', 'Source Description'], ascending=[True, True])
+            else:
+                grouper['Standard Type'] = grouper['Standard Type'].map(sty_pri)
+                grouper['Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
+                grouper['Source Description'] = grouper['Source Description'].map(src_pri)
+                grouper = grouper.sort_values(by=['Standard Type', 'Standard Relation', 'Source Description'], ascending=[True, True, True])
+
+            g_docs = grouper.groupby('Document ChEMBL ID')
+            max_group = None
+            max_len=0
+            for _,g in g_docs:
+                if len(g) > max_len:
+                    max_len = len(g)
+                    max_group = g
+            if max_group is not None:
+                min_val = max_group["Standard Value"].idxmin()
+                indexes.append(min_val)
             
-            group['sty_sort_key'] = group['Standard Type'].map(sty_pri)
-            group['rel_sort_key'] = group['Standard Relation'].map(rel_pri)
-            group['src_sort_key'] = group['Source Description'].map(src_pri)
 
-            group_sorted = group.sort_values(by=['sty_sort_key', 'rel_sort_key', 'src_sort_key'], ascending=[True, True, True])
-            return group_sorted.iloc[:1]
-        
-        dominant_data = duplicate_data.groupby('Molecule ChEMBL ID').apply(get_dominant_record).reset_index(drop=True)
-        
+        filter_data = duplicate_data.loc[indexes]
 
-    # Seleziona i record da `data` che non hanno un ID in `dominant_ids`
-        duplicate_ids = duplicate_data['Molecule ChEMBL ID'].unique()
-        non_duplicate_data = data[~data['Molecule ChEMBL ID'].isin(duplicate_ids)]
-        final_data= pd.concat([non_duplicate_data, dominant_data], ignore_index=True)
-
-        return final_data
+        return pd.concat([unique_data,filter_data])
 
 
     def active_inactive(self, data: pd.DataFrame):
@@ -340,11 +342,11 @@ class Cleaner():
             os.makedirs(report_path)
 
         filenames = {
-            'whole_dataset.csv': whole_dataset,
-            'whole_act.csv': whole_act,
-            'whole_inact.csv': whole_inact,
-            'inc_data.csv': inc_data,
-            'data_report.csv': data_report
+            'whole_dataset_EGFR.csv': whole_dataset,
+            'whole_act_EGFR.csv': whole_act,
+            'whole_inact_EGFR.csv': whole_inact,
+            'inc_data_EGFR.csv': inc_data,
+            'data_report_EGFR.csv': data_report
         }
 
         for filename, df in filenames.items():

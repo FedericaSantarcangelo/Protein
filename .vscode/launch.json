@@ -11,14 +11,6 @@
                      "--standard_type_perc","Inhibition,Activity","--standard_type_act","IC50,EC50,Kd,Ki","--standard_type_log","pIC50,pEC50",
                      "--assay_description_perc","5 uM,10 uM,20 uM,30 uM,40 uM,50 uM,100 uM"
                     ]
-        },
-
-        {
-            "name": "mutation",
-            "type":"debugpy",
-            "request":"launch",
-            "program": "./main.py",
-            "console":"integratedTerminal"
         }
     ]
 }
