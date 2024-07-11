@@ -4,11 +4,15 @@ import pandas as pd
 import sys
 import numpy as np
 from utils.args import data_cleaning_args
+import re
+from collections import defaultdict
+
 
 class Mutation():
     def __init__(self, args: Namespace, data: pd.DataFrame):
         self.args = args
         self.data = data
+        self.pattern = re.compile(r'[A-Z]\d{1,4}[A-Z](?:\w+)?') #devo formattare diversi pattern di mutazioni
 
     def load_data(self):
         """Load data uniprot
@@ -32,30 +36,94 @@ class Mutation():
         :return: mutations
         """
         uniprot = self.load_data()
-        single = self.single_mutation(uniprot, data)
-        double = self.double_mutation(uniprot, data)
-        triple = self.triple_mutation(uniprot, data)
-        wild = self.wild_type(uniprot, data)
-        mixed = self.mixed_type(uniprot, data)
-        return data
+        knonw_mutations = self.format_uniprot(uniprot.copy())
+        single = self.single_mutation(knonw_mutations, data)
+        double = self.double_mutation(knonw_mutations, data)
+        triple = self.triple_mutation(knonw_mutations, data)
+        wild = self.wild_type(knonw_mutations, data)
+        mixed = self.mixed_type(knonw_mutations, data)
+        final = self.format_output(single, double, triple, wild, mixed)
+        return final
 
 
-    def single_mutation(self, uniprot: pd.DataFrame, data: pd.DataFrame):
+    def format_uniprot(self, uniprot: pd.DataFrame):
+        """Format uniprot dataframe
+        :param uniprot: uniprot dataframe
+        :return: dictionary with keys (Accession Code, CheMBL ID):[mutations]
+        """
+        #first remove all the rows with NaN values in the column 
+        uniprot = uniprot.dropna(subset=['Known mutations'])
+
+        #then I create a dictionary with the keys (Accession Code, CheMBL ID) and the values are the mutations
+        #clean and standardize the mutations
+        uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r';+', ';', regex=True) #remove multiple ;
+        uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r'^\s*;\s*|\s*;\s*$', '', regex=True) #remove ; 
+        uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r'\s*;\s*', ';', regex=True) #remove spaces before and after ;
+        uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r'"', '', regex=True) # Rimuovi virgolette
+        uniprot['Known mutations'] = uniprot['Known mutations'].str.split(';') #split the mutations
+
+        #create the dictionary
+        mutation_dict = {}
+        for _, row in uniprot.iterrows():
+            key = (row['Accession Code'], row['ChEMBL DB'])
+            mutations = [mutation for mutation in row['Known mutations'] if mutation]
+            if key not in mutation_dict:
+                mutation_dict[key] = []
+            mutation_dict[key].extend(mutations)
+
+        return mutation_dict
+
+    def single_mutation(self, uniprot, data: pd.DataFrame):
         """Get mutations
-        :param uniprot: uniprot dataframe with mutations known
+        :mutation_dict: dictionary with keys (Accession Code, CheMBL ID):[mutations]
         :param data: data dataframe with mutations to be found
         :return: mutations
         """
-        uniprot=uniprot.dropna(subset=['Known mutations'])
-        for mutations in uniprot['Known mutations']:
-        # Dividi le mutazioni su ';' per gestire più mutazioni
-            split_mutations = mutations.split(';')
-            for mutation in split_mutations:
-                mutation = mutation.strip()  # Rimuovi spazi bianchi extra
-                for assay_description in data['Assay Description']:
-                    if mutation in assay_description:
-                        print(data['Molecule ChEMBL ID'])
-        return data
+        mutation_match = defaultdict(list)
+        for(accession_code, chembl_id), mutations in uniprot.items():
+            for mutation in mutations:
+                mutation_key = ()
+                #compute the shift for each mutation
+                for shift in range(-2,3):
+                    shifted_mutation = self.shift_mutation(mutation, shift)
+                    mutation_key += (shifted_mutation,)
+                #search the mutation in the data 
+                for mut in mutation_key:
+                    matches = data[data['Assay Description'].str.contains(mut, case=False, na=False)]['Molecule ChEMBL ID'].unique() 
+                    mutation_match[mutation_key].extend(matches)
+
+        if not mutation_matches[mutation_key]:
+            del mutation_matches[mutation_key]   
+
+        mutation_matches = {key: value for key, value in mutation_matches.items() if value}        
+        return mutation_match
+    
+    def shift_mutation(self, mutation: str, shift: int):
+        """Shift mutation
+        :param mutation: mutation
+        :param shift: shift
+        :return: shifted mutation
+        """
+        if not self.pattern.match(mutation):
+            raise ValueError(f"Mutation {mutation} is not in the correct format")
+        
+        #spilt the mutation in the letter and the number
+        letter = mutation[0]
+        number = mutation[1:-1]
+        last_letter = mutation[-1]
+
+        try:
+            number = int(number)
+        except ValueError:
+            raise ValueError(f"Mutation {mutation} is not in the correct format")
+        
+        #shift the number
+        new_num = str(number + shift)
+
+        if len(new_num) > 4 or int(new_num) <= 0:
+            return None
+        mutation = f"{letter}{new_num}{last_letter}"
+        return mutation
     
     def double_mutation(self, uniprot: pd.DataFrame, data: pd.DataFrame):
         """Get double mutations
@@ -89,7 +157,16 @@ class Mutation():
         """
         return data
     
-    
+    def format_output(self, single, double, triple, wild, mixed):
+        """Format output
+        :param single: single mutations
+        :param double: double mutations
+        :param triple: triple mutations
+        :param wild: wild type mutations
+        :param mixed: mixed type mutations
+        :return: mutations
+        """
+        return 
 
 
 #le mutazioni le riconosco nell'assay description perchè sono formattate come lettera(singolo char)+numero(da 1 a 4 cifre)+lettera(singolo char) 

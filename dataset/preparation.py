@@ -29,7 +29,6 @@ class Cleaner():
         mutation = Mutation(self.args, data) #il return di mutation è il dataframe per poi rimuovere i duplicati, gli args devono essere quelli relativi alla mutation
         data = mutation.get_mutations(data.copy())
         data = self.remove_duplicate(data)
-        
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
         directory_path = '/home/federica/'
         self.save_data_report(directory_path, data_report, whole_dataset, whole_act, whole_inact, inc_data)
@@ -356,3 +355,6 @@ class Cleaner():
                 full_path=os.path.join(dataset_path, filename)
             
             df.to_csv(full_path, index=True)
+
+            #implementare il salvataggio in modo che sia possibile salvare i file senza sovrascrivere i file già presenti 
+            #aggiungere la colonna classe con 0:inattivo,1:attivo,2:moderatamente attivo
