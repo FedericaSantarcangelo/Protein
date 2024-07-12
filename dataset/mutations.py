@@ -2,8 +2,6 @@ from argparse import Namespace, ArgumentParser
 import os
 import pandas as pd
 import sys
-import numpy as np
-from utils.args import data_cleaning_args
 import re
 from collections import defaultdict
 
@@ -12,7 +10,7 @@ class Mutation():
     def __init__(self, args: Namespace, data: pd.DataFrame):
         self.args = args
         self.data = data
-        self.pattern = re.compile(r'[A-Z]\d{1,4}[A-Z](?:\w+)?') #devo formattare diversi pattern di mutazioni
+        self.pattern = re.compile(r'^[A-Z]\d{1,4}[A-Z]$') #devo formattare diversi pattern di mutazioni
 
     def load_data(self):
         """Load data uniprot
@@ -37,14 +35,28 @@ class Mutation():
         """
         uniprot = self.load_data()
         knonw_mutations = self.format_uniprot(uniprot.copy())
-        single = self.single_mutation(knonw_mutations, data)
-        double = self.double_mutation(knonw_mutations, data)
-        triple = self.triple_mutation(knonw_mutations, data)
-        wild = self.wild_type(knonw_mutations, data)
-        mixed = self.mixed_type(knonw_mutations, data)
+        no_mut,mut=self.split_data(data.copy())
+        single = self.single_mutation(knonw_mutations, mut)
+        double = self.double_mutation(knonw_mutations, mut)
+        triple = self.triple_mutation(knonw_mutations, mut)
+        wild = self.wild_type(knonw_mutations, mut)
+        mixed = self.mixed_type(knonw_mutations, mut)
         final = self.format_output(single, double, triple, wild, mixed)
         return final
-
+    
+    def split_data(self, data: pd.DataFrame):
+        """Split data considering mutations: if there are no mutations, the row is added to no_mut, otherwise to mut
+        :param data: data dataframe
+        :return: no_mut, mut
+        """
+         # Aggiungi la colonna 'mutation'
+        data['mutation'] = data[data['Assay Description']].apply(
+            lambda x: bool(self.pattern.search(x))  )
+    
+    # Filtra i dati
+        mut = data[data['mutation'] == True]
+        no_mut = data[data['mutation'] == False]
+        return no_mut, mut
 
     def format_uniprot(self, uniprot: pd.DataFrame):
         """Format uniprot dataframe
@@ -61,12 +73,13 @@ class Mutation():
         uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r'\s*;\s*', ';', regex=True) #remove spaces before and after ;
         uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r'"', '', regex=True) # Rimuovi virgolette
         uniprot['Known mutations'] = uniprot['Known mutations'].str.split(';') #split the mutations
+        #check if the mutations are in the correct format
 
         #create the dictionary
         mutation_dict = {}
         for _, row in uniprot.iterrows():
             key = (row['Accession Code'], row['ChEMBL DB'])
-            mutations = [mutation for mutation in row['Known mutations'] if mutation]
+            mutations = [mutation for mutation in row['Known mutations'] if mutation if self.pattern.match(mutation)]
             if key not in mutation_dict:
                 mutation_dict[key] = []
             mutation_dict[key].extend(mutations)
@@ -79,24 +92,8 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: mutations
         """
-        mutation_match = defaultdict(list)
-        for(accession_code, chembl_id), mutations in uniprot.items():
-            for mutation in mutations:
-                mutation_key = ()
-                #compute the shift for each mutation
-                for shift in range(-2,3):
-                    shifted_mutation = self.shift_mutation(mutation, shift)
-                    mutation_key += (shifted_mutation,)
-                #search the mutation in the data 
-                for mut in mutation_key:
-                    matches = data[data['Assay Description'].str.contains(mut, case=False, na=False)]['Molecule ChEMBL ID'].unique() 
-                    mutation_match[mutation_key].extend(matches)
 
-        if not mutation_matches[mutation_key]:
-            del mutation_matches[mutation_key]   
-
-        mutation_matches = {key: value for key, value in mutation_matches.items() if value}        
-        return mutation_match
+        return
     
     def shift_mutation(self, mutation: str, shift: int):
         """Shift mutation
@@ -104,26 +101,17 @@ class Mutation():
         :param shift: shift
         :return: shifted mutation
         """
-        if not self.pattern.match(mutation):
+        match = re.match(r"([A-Z])(\d{1,4})([A-Z])", mutation)
+        if not match:
             raise ValueError(f"Mutation {mutation} is not in the correct format")
-        
-        #spilt the mutation in the letter and the number
-        letter = mutation[0]
-        number = mutation[1:-1]
-        last_letter = mutation[-1]
-
-        try:
-            number = int(number)
-        except ValueError:
-            raise ValueError(f"Mutation {mutation} is not in the correct format")
-        
-        #shift the number
-        new_num = str(number + shift)
-
-        if len(new_num) > 4 or int(new_num) <= 0:
-            return None
-        mutation = f"{letter}{new_num}{last_letter}"
-        return mutation
+    
+        letter, number, last_letter = match.groups()
+        # Applica lo shift al numero
+        shifted_number = int(number) + shift
+        # Riassembla la mutazione
+        shifted_mutation = f"{letter}{shifted_number}{last_letter}"
+    
+        return shifted_mutation
     
     def double_mutation(self, uniprot: pd.DataFrame, data: pd.DataFrame):
         """Get double mutations
@@ -167,13 +155,3 @@ class Mutation():
         :return: mutations
         """
         return 
-
-
-#le mutazioni le riconosco nell'assay description perchè sono formattate come lettera(singolo char)+numero(da 1 a 4 cifre)+lettera(singolo char) 
-#1.le key words che devo considerare sono wt, wild type e wild-type quindi devo cercare queste key words nel campo assay description e tenere questi record
-#2. cerco il tipo di mutazione e vedo se ci sono altri record con la stessa mutazione 
-#3. distinzione tra mutazione singole doppie e triple
-#gli args possono essere gli stessi del data cleaning perchè mi interessano fondamentalmente i dizionari delle priorità
-#devo capire se implementare anche una funzione per leggere i file uniprot nel caso siano presenti e quindi le mutazioni siano già state annotate e le prendo direttamente da li
-#potrebbe essere utile creare il file di tutte le mutazioni che vengono trovate che viene sempre aggiornato in base ai nuovi dati che vengono analizzati,
-#creando un db di mutazioni che possono essere usate per fare analisi statistiche 
