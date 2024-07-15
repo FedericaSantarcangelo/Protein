@@ -10,7 +10,7 @@ class Mutation():
     def __init__(self, args: Namespace, data: pd.DataFrame):
         self.args = args
         self.data = data
-        self.pattern = re.compile(r'^[A-Z]\d{1,4}[A-Z]$') #devo formattare diversi pattern di mutazioni
+        self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type| wt|wilde_type', re.IGNORECASE) #devo formattare diversi pattern di mutazioni
 
     def load_data(self):
         """Load data uniprot
@@ -36,12 +36,12 @@ class Mutation():
         uniprot = self.load_data()
         knonw_mutations = self.format_uniprot(uniprot.copy())
         no_mut,mut=self.split_data(data.copy())
-        single = self.single_mutation(knonw_mutations, mut)
+        single_k, single_u = self.single_mutation(knonw_mutations, mut)
         double = self.double_mutation(knonw_mutations, mut)
         triple = self.triple_mutation(knonw_mutations, mut)
         wild = self.wild_type(knonw_mutations, mut)
         mixed = self.mixed_type(knonw_mutations, mut)
-        final = self.format_output(single, double, triple, wild, mixed)
+        final = self.format_output(single_k, single_u, double, triple, wild, mixed)
         return final
     
     def split_data(self, data: pd.DataFrame):
@@ -50,8 +50,8 @@ class Mutation():
         :return: no_mut, mut
         """
          # Aggiungi la colonna 'mutation'
-        data['mutation'] = data[data['Assay Description']].apply(
-            lambda x: bool(self.pattern.search(x))  )
+        data['mutation'] = data['Assay Description'].apply(
+            lambda x: bool(self.pattern.search(x)))
     
     # Filtra i dati
         mut = data[data['mutation'] == True]
@@ -75,6 +75,8 @@ class Mutation():
         uniprot['Known mutations'] = uniprot['Known mutations'].str.split(';') #split the mutations
         #check if the mutations are in the correct format
 
+        #devo aggiungere l emutazioni con .. come le gestisco???
+
         #create the dictionary
         mutation_dict = {}
         for _, row in uniprot.iterrows():
@@ -92,8 +94,34 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: mutations
         """
-
-        return
+        all_mutations = set()
+        for mutations in uniprot.values():
+            for mutation in mutations:
+                if isinstance(mutation, tuple):
+                    all_mutations.update(mutation)  # Aggiunge ogni elemento della tupla
+                else:
+                    all_mutations.add(mutation)  # Aggiunge la mutazione se non è una tupla
+        #cerco single mutant in uniprot(dizionario conosciute) e in data (dataframe con mutazioni da classificare)
+        pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b', re.IGNORECASE)
+        found_mut = []
+        not_found = []
+        #itero sul df
+        for _,row in data.iterrows():
+            #itero sulle mutazioni
+            mutation = pattern.search(row['Assay Description'])
+            if mutation:
+                mutation = mutation.group()
+                if mutation in all_mutations:
+                    found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                else:
+                        for shift in [-2,-1,1,2]:
+                            shifted_mutation = self.shift_mutation(mutation, shift)
+                            if shifted_mutation in all_mutations:
+                                found_mut.append((row['Molecule ChEMBL ID'], shifted_mutation))
+                            else:
+                                not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                break
+        return found_mut,not_found
     
     def shift_mutation(self, mutation: str, shift: int):
         """Shift mutation
@@ -101,11 +129,11 @@ class Mutation():
         :param shift: shift
         :return: shifted mutation
         """
-        match = re.match(r"([A-Z])(\d{1,4})([A-Z])", mutation)
+        match = re.match(r"\b[A-Z]\d{1,4}[A-Z]\b", mutation)
         if not match:
             raise ValueError(f"Mutation {mutation} is not in the correct format")
     
-        letter, number, last_letter = match.groups()
+        letter, number, last_letter = mutation[0], mutation[1:-1], mutation[-1]
         # Applica lo shift al numero
         shifted_number = int(number) + shift
         # Riassembla la mutazione
@@ -119,6 +147,11 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: double mutations
         """
+        #cerco double mutant e combinazioni dei singoli mutanti
+        pattern = re.compile(r'\b(?:[A-Z]\d+[A-Z](?:-[A-Z]\d+[A-Z]del)?)(?:\/[A-Z]\d+[A-Z]|-[A-Z]\d+[A-Z])?\b')
+        found_mut = []
+        not_found = []
+        
         return data
     
     def triple_mutation(self, uniprot: pd.DataFrame, data: pd.DataFrame):
@@ -127,6 +160,8 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: triple mutations
         """
+        #cerco triple mutant e combinazioni dei singoli e double mutanti
+
         return data
     
     def wild_type(self, uniprot: pd.DataFrame, data: pd.DataFrame):
@@ -135,6 +170,7 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: wild type mutations
         """
+        #cerco se ci sono in quelle conosciute
         return data
     
     def mixed_type(self, uniprot: pd.DataFrame, data: pd.DataFrame):
