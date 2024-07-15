@@ -151,7 +151,7 @@ class Mutation():
         pattern = re.compile(r'\b(?:[A-Z]\d+[A-Z](?:-[A-Z]\d+[A-Z]del)?)(?:\/[A-Z]\d+[A-Z]|-[A-Z]\d+[A-Z])?\b')
         found_mut = []
         not_found = []
-        
+        # itero sul dataframe per riconoscere le mutazioni doppie
         return data
     
     def triple_mutation(self, uniprot: pd.DataFrame, data: pd.DataFrame):
@@ -161,6 +161,7 @@ class Mutation():
         :return: triple mutations
         """
         #cerco triple mutant e combinazioni dei singoli e double mutanti
+        
 
         return data
     
