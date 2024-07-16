@@ -34,14 +34,14 @@ class Mutation():
         :return: mutations
         """
         uniprot = self.load_data()
-        knonw_mutations = self.format_uniprot(uniprot.copy())
+        knonw_mutations,all = self.format_uniprot(uniprot.copy())
         no_mut,mut=self.split_data(data.copy())
-        single_k, single_u = self.single_mutation(knonw_mutations, mut)
-        double = self.double_mutation(knonw_mutations, mut)
-        triple = self.triple_mutation(knonw_mutations, mut)
-        wild = self.wild_type(knonw_mutations, mut)
-        mixed = self.mixed_type(knonw_mutations, mut)
-        final = self.format_output(single_k, single_u, double, triple, wild, mixed)
+        single_k, single_u = self.single_mutation(all, mut) #forse aggiungere anche il dict delle mutazioni conosciute per la return formattata in un altro modo
+        double_k,double_u = self.double_mutation(all, mut)
+        triple_k,triple_u = self.triple_mutation(all, mut)
+        wild = self.wild_type(all, mut)
+        mixed = self.mixed_type(all, mut)
+        final = self.format_output(single_k, single_u, double_k,double_u, triple_k,triple_u, wild, mixed)
         return final
     
     def split_data(self, data: pd.DataFrame):
@@ -86,43 +86,14 @@ class Mutation():
                 mutation_dict[key] = []
             mutation_dict[key].extend(mutations)
 
-        return mutation_dict
-
-    def single_mutation(self, uniprot, data: pd.DataFrame):
-        """Get mutations
-        :mutation_dict: dictionary with keys (Accession Code, CheMBL ID):[mutations]
-        :param data: data dataframe with mutations to be found
-        :return: mutations
-        """
         all_mutations = set()
-        for mutations in uniprot.values():
+        for mutations in mutation_dict.values():
             for mutation in mutations:
-                if isinstance(mutation, tuple):
-                    all_mutations.update(mutation)  # Aggiunge ogni elemento della tupla
-                else:
-                    all_mutations.add(mutation)  # Aggiunge la mutazione se non è una tupla
-        #cerco single mutant in uniprot(dizionario conosciute) e in data (dataframe con mutazioni da classificare)
-        pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b', re.IGNORECASE)
-        found_mut = []
-        not_found = []
-        #itero sul df
-        for _,row in data.iterrows():
-            #itero sulle mutazioni
-            mutation = pattern.search(row['Assay Description'])
-            if mutation:
-                mutation = mutation.group()
-                if mutation in all_mutations:
-                    found_mut.append((row['Molecule ChEMBL ID'], mutation))
-                else:
-                        for shift in [-2,-1,1,2]:
-                            shifted_mutation = self.shift_mutation(mutation, shift)
-                            if shifted_mutation in all_mutations:
-                                found_mut.append((row['Molecule ChEMBL ID'], shifted_mutation))
-                            else:
-                                not_found.append((row['Molecule ChEMBL ID'], mutation))
-                                break
-        return found_mut,not_found
+                all_mutations.add(mutation)  # Aggiunge la mutazione se non è una tupla
+
+        return mutation_dict,all_mutations
     
+        
     def shift_mutation(self, mutation: str, shift: int):
         """Shift mutation
         :param mutation: mutation
@@ -140,7 +111,35 @@ class Mutation():
         shifted_mutation = f"{letter}{shifted_number}{last_letter}"
     
         return shifted_mutation
-    
+
+    def single_mutation(self, uniprot, data: pd.DataFrame):
+        """Get mutations
+        :mutation_dict: dictionary with keys (Accession Code, CheMBL ID):[mutations]
+        :param data: data dataframe with mutations to be found
+        :return: mutations
+        """
+        #cerco single mutant in uniprot(dizionario conosciute) e in data (dataframe con mutazioni da classificare)
+        pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b', re.IGNORECASE)
+        found_mut = []
+        not_found = []
+        #itero sul df
+        for _,row in data.iterrows():
+            #itero sulle mutazioni
+            mutation = pattern.search(row['Assay Description'])
+            if mutation:
+                mutation = mutation.group()
+                if mutation in uniprot:
+                    found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                else:
+                        for shift in [-2,-1,1,2]: #sistemare il for
+                            shifted_mutation = self.shift_mutation(mutation, shift)
+                            if shifted_mutation in uniprot:
+                                found_mut.append((row['Molecule ChEMBL ID'], shifted_mutation))
+                            else:
+                                not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                break
+        return found_mut,not_found
+
     def double_mutation(self, uniprot: pd.DataFrame, data: pd.DataFrame):
         """Get double mutations
         :param uniprot: uniprot dataframe with mutations known
@@ -151,8 +150,42 @@ class Mutation():
         pattern = re.compile(r'\b(?:[A-Z]\d+[A-Z](?:-[A-Z]\d+[A-Z]del)?)(?:\/[A-Z]\d+[A-Z]|-[A-Z]\d+[A-Z])?\b')
         found_mut = []
         not_found = []
-        # itero sul dataframe per riconoscere le mutazioni doppie
-        return data
+
+        for _,row in data.iterrows():
+            mutation = pattern.search(row['Assay Description'])
+            if mutation:
+                mutation = mutation.group()
+                split=re.split(r'\/|-',mutation)
+                if len(split)==2:
+                    if split[0] in uniprot:
+                        if split[1] in uniprot:
+                            found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                        else:
+                            for shift in [-2,-1,1,2]:
+                                shifted_mutation = self.shift_mutation(split[1], shift)
+                                if shifted_mutation in uniprot:
+                                    found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                else:
+                                    not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                    break
+                    else:
+                        for shift in [-2,-1,1,2]:
+                            shifted_mutation = self.shift_mutation(split[0], shift)
+                            if shifted_mutation in uniprot:
+                                if split[1] in uniprot:
+                                    found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                else:
+                                    for shift in [-2,-1,1,2]:
+                                        shifted_mutation = self.shift_mutation(split[1], shift)
+                                        if shifted_mutation in uniprot:
+                                            found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                        else:
+                                            not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                            break
+                            else:
+                                not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                break
+        return found_mut,not_found
     
     def triple_mutation(self, uniprot: pd.DataFrame, data: pd.DataFrame):
         """Get triple mutations
@@ -160,10 +193,69 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: triple mutations
         """
-        #cerco triple mutant e combinazioni dei singoli e double mutanti
-        
-
-        return data
+        pattern = re.compile(r'\b([A-Z]\d+[A-Z](?:-[A-Z]\d+[A-Z]del)?)(?:\/([A-Z]\d+[A-Z](?:-[A-Z]\d+[A-Z]del)?)){2}\b')
+        found_mut = []
+        not_found = []
+        #modificare logica for, troppo lungo. modificare chiamata a shift_mutation
+        for _,row in data.iterrows():
+            mutation = pattern.search(row['Assay Description'])
+            if mutation:
+                mutation = mutation.group()
+                split=re.split(r'\/|-',mutation)
+                if len(split) == 3:
+                    if split[0] in uniprot:
+                        if split[1] in uniprot:
+                            if split[2] in uniprot:
+                                found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                            else:
+                                for shift in [-2,-1,1,2]:
+                                    shifted_mutation = self.shift_mutation(split[2], shift)
+                                    if shifted_mutation in uniprot:
+                                        found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                    else:
+                                        not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                        break
+                        else:
+                            for shift in [-2,-1,1,2]:
+                                shifted_mutation = self.shift_mutation(split[1], shift)
+                                if shifted_mutation in uniprot:
+                                    if split[2] in uniprot:
+                                        found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                    else:
+                                        for shift in [-2,-1,1,2]:
+                                            shifted_mutation = self.shift_mutation(split[2], shift)
+                                            if shifted_mutation in uniprot:
+                                                found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                            else:
+                                                not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                                break
+                                else:
+                                    not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                    break
+                    else:
+                        for shift in [-2,-1,1,2]:
+                            shifted_mutation = self.shift_mutation(split[0], shift)
+                            if shifted_mutation in uniprot:
+                                if split[1] in uniprot:
+                                    if split[2] in uniprot:
+                                        found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                    else:
+                                        for shift in [-2,-1,1,2]:
+                                            shifted_mutation = self.shift_mutation(split[2], shift)
+                                            if shifted_mutation in uniprot:
+                                                found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                            else:
+                                                not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                                break
+                                else:
+                                    for shift in [-2,-1,1,2]:
+                                        shifted_mutation = self.shift_mutation(split[1], shift)
+                                        if shifted_mutation in uniprot:
+                                            found_mut.append((row['Molecule ChEMBL ID'], mutation))
+                                        else:
+                                            not_found.append((row['Molecule ChEMBL ID'], mutation))
+                                            break
+        return found_mut,not_found
     
     def wild_type(self, uniprot: pd.DataFrame, data: pd.DataFrame):
         """Get wild type mutations

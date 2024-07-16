@@ -1,10 +1,19 @@
 import os
+import torch
 import pandas as pd
+import random
+import numpy as np
 import sys
+conf_path = os.getcwd()
+sys.path.append(conf_path)
 import argparse
 from dataset.preparation import Cleaner 
 from utils.args import data_cleaning_args
 from dataset.processing import process_molecules_and_calculate_descriptors
+
+import datetime
+import time 
+
 
 def parser_args():
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
@@ -14,6 +23,18 @@ def parser_args():
     print(parser.parse_args())
     return parser.parse_args()
 
+#per riproducibilità dei risultati con i modelli
+def set_random_seed(seed: int) -> None:
+    """set the seeds at a certain value
+    :param seed: the seed value to be set
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    try:
+        torch.cuda.manual_seed_all(seed)
+    except BaseException:
+        print("Could not set cuda seed.")
 
 def load_data(data_path):
     if not os.path.exists(data_path):
