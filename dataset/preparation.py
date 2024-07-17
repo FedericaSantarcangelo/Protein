@@ -26,8 +26,9 @@ class Cleaner():
         data = self.remove_row(data)
         data = self.filter_data(data)
         data = self.remove_salts(data)
-        mutation = Mutation(self.args, data) #il return di mutation è il dataframe per poi rimuovere i duplicati, gli args devono essere quelli relativi alla mutation
-        data = mutation.get_mutations(data.copy())
+        if self.args.mutation:
+            mutation = Mutation(self.args, data) #il return di mutation è il dataframe per poi rimuovere i duplicati, gli args devono essere quelli relativi alla mutation
+            data,mutation_report = mutation.get_mutations(data.copy())
         data = self.remove_duplicate(data)
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
         directory_path = '/home/federica/'
@@ -200,13 +201,13 @@ class Cleaner():
             grouper = grouper[grouper['Standard Type'] == dominant]
 
             if dominant:
-                grouper['Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
-                grouper['Source Description'] = grouper['Source Description'].map(src_pri)
+                grouper.loc[:,'Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
+                grouper.loc[:,'Source Description'] = grouper['Source Description'].map(src_pri)
                 grouper = grouper.sort_values(by=['Standard Relation', 'Source Description'], ascending=[True, True])
             else:
-                grouper['Standard Type'] = grouper['Standard Type'].map(sty_pri)
-                grouper['Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
-                grouper['Source Description'] = grouper['Source Description'].map(src_pri)
+                grouper.loc[:,'Standard Type'] = grouper['Standard Type'].map(sty_pri)
+                grouper.loc[:,'Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
+                grouper.loc[:,'Source Description'] = grouper['Source Description'].map(src_pri)
                 grouper = grouper.sort_values(by=['Standard Type', 'Standard Relation', 'Source Description'], ascending=[True, True, True])
 
             g_docs = grouper.groupby('Document ChEMBL ID')

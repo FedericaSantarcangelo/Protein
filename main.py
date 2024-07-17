@@ -1,25 +1,38 @@
-import os
-import torch
-import pandas as pd
-import random
-import numpy as np
-import sys
-conf_path = os.getcwd()
-sys.path.append(conf_path)
+""" 
+Main module for target cleaning and preparation
+"""
 import argparse
-from dataset.preparation import Cleaner 
-from utils.args import data_cleaning_args
-from dataset.processing import process_molecules_and_calculate_descriptors
+import os
 
 import datetime
-import time 
+import time
+import sys
+import random
+import torch
+import pandas as pd
+import numpy as np
+
+
+from dataset.preparation import Cleaner
+from dataset.processing import process_molecules_and_calculate_descriptors
+from utils.args import data_cleaning_args
+
+
+conf_path = os.getcwd()
+sys.path.append(conf_path)
+
 
 
 def parser_args():
+    """
+    Parse the arguments
+    :return: the arguments
+    """
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     data_cleaning_args(parser)
     #mutation(parser)
-    parser.add_argument('--path', type = str, default = '/home/federica/chembl1865/EGFR.csv', help = 'Specify the path of the data')
+    parser.add_argument('--path', type = str, default = '/home/federica/chembl1865/EGFR.csv',
+                        help = 'Specify the path of the data')
     print(parser.parse_args())
     return parser.parse_args()
 
@@ -37,15 +50,20 @@ def set_random_seed(seed: int) -> None:
         print("Could not set cuda seed.")
 
 def load_data(data_path):
+    """
+    Load the data from the path
+    :param data_path: the path of the data
+    :return: the data
+    """
     if not os.path.exists(data_path):
         print(f"Path {data_path} does not exist")
         sys.exit(1)
     else:
-         try:
+        try:
             data = pd.read_csv(data_path, sep=';', low_memory=False)
             return data
-         except pd.errors.ParserError as e:
-             print(f"ParserError: {e}")
+        except pd.errors.ParserError as e:
+            print(f"ParserError: {e}")
     return None
 
 def main():
@@ -54,12 +72,11 @@ def main():
     data = load_data(args.path)
     copy = data.copy()
 
-    cleaner = Cleaner(args, copy) # Cleaner class is defined in dataset/preparation.py for data cleaning
-    cleaned_data = cleaner.clean_data(copy) # clean_data method is defined in Cleaner class to call all the data cleaning methods
+    cleaner = Cleaner(args, copy)
+    cleaned_data = cleaner.clean_data(copy)
 
-    #df=process_molecules_and_calculate_descriptors(cleaned_data) # process_molecule_with_logging is defined in dataset/processing.py to process the molecules and calculate the descriptors
-    #print(df)
+    df=process_molecules_and_calculate_descriptors(cleaned_data)
+    print(df)
 
 if __name__ == '__main__':
     main()
-

@@ -26,6 +26,7 @@ def data_cleaning_args(parser : ArgumentParser) -> None:
                         help="source priority")
     parser.add_argument('--path_uniprot', type = str, default = '/home/federica/df_uniprot_details.tsv', help = 'Specify the path of uniprot file')
     
+    parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')
         
         
     
