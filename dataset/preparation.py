@@ -32,7 +32,7 @@ class Cleaner():
         data = self.remove_duplicate(data)
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
         directory_path = '/home/federica/'
-        self.save_data_report(directory_path, data_report, whole_dataset, whole_act, whole_inact, inc_data)
+        self.save_data_report(directory_path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report)
         
         return data
 
@@ -332,7 +332,7 @@ class Cleaner():
 
         return data_report, df_whole, df_act_rev_act, df_whole_inact, df_act_rev_inc
     
-    def save_data_report(self,path, data_report, whole_dataset, whole_act, whole_inact, inc_data):
+    def save_data_report(self,path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report):
         dataset_path = os.path.join(path,'data', 'filtered')
         report_path = os.path.join(path,'data', 'report')
 
@@ -346,7 +346,8 @@ class Cleaner():
             'whole_act_EGFR.csv': whole_act,
             'whole_inact_EGFR.csv': whole_inact,
             'inc_data_EGFR.csv': inc_data,
-            'data_report_EGFR.csv': data_report
+            'data_report_EGFR.csv': data_report,
+            'mutation_EGFR.csv': mutation_report
         }
 
         for filename, df in filenames.items():
