@@ -69,11 +69,11 @@ class Mutation():
         """ 
         uniprot = uniprot.dropna(subset=['Known mutations'])
 
-        uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r';+', ';', regex=True) #remove multiple ;
-        uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r'^\s*;\s*|\s*;\s*$', '', regex=True) #remove ; 
-        uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r'\s*;\s*', ';', regex=True) #remove spaces before and after ;
-        uniprot['Known mutations'] = uniprot['Known mutations'].str.replace(r'"', '', regex=True) # Rimuovi virgolette
-        uniprot['Known mutations'] = uniprot['Known mutations'].str.split(';') #split the mutations
+        uniprot.loc[:, 'Known mutations'] = uniprot['Known mutations'].str.replace(r';+', ';', regex=True)  # remove multiple ;
+        uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.replace(r'^\s*;\s*|\s*;\s*$', '', regex=True) #remove ; 
+        uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.replace(r'\s*;\s*', ';', regex=True) #remove spaces before and after ;
+        uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.replace(r'"', '', regex=True) # Rimuovi virgolette
+        uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.split(';') #split the mutations
         
         mutation_dict = {}
         for _, row in uniprot.iterrows():
@@ -114,7 +114,7 @@ class Mutation():
         shifted_mutation_str= ','.join(shifted_mutation)
         return shifted_mutation_str
     
-    def find_or_shift(self, mutation, uniprot_set):
+    def find_and_shift(self, mutation, uniprot_set):
         """
         Cerca la mutazione in uniprot o prova gli shift.
         param mutation: mutazione
@@ -141,7 +141,7 @@ class Mutation():
             mutation = pattern.search(row['Assay Description'])
             if mutation:
                 mutation = mutation.group()
-                t,shifted_mutation = self.find_or_shift(mutation, uniprot)
+                t,shifted_mutation = self.find_and_shift(mutation, uniprot)
                 if t:
                     found_mut.append((row['Molecule ChEMBL ID'], mutation,shifted_mutation))
                     data.loc[index, 'mutant_known'] = True
@@ -170,8 +170,8 @@ class Mutation():
                 if len(split_mutations) != 2:
                     continue
                 split1, split2 = split_mutations[0], split_mutations[1]
-                t,mutations_shifted = self.find_or_shift(split1, uniprot)
-                t_2,mutations_shifted_2 = self.find_or_shift(split2, uniprot)
+                t,mutations_shifted = self.find_and_shift(split1, uniprot)
+                t_2,mutations_shifted_2 = self.find_and_shift(split2, uniprot)
                 if t and t_2:
                     found_mut.append((row['Molecule ChEMBL ID'], mutation, mutations_shifted,mutations_shifted_2))
                     data.loc[index, 'mutant_known'] = True
@@ -200,9 +200,9 @@ class Mutation():
                 if len(split) != 3:
                     continue
                 split1,split2,split3=split[0],split[1],split[2]
-                t,mutations_shifted= self.find_or_shift(split1,uniprot)
-                t2,mutations_shifted_2=self.find_or_shift(split2,uniprot)
-                t3,mutations_shifted_3=self.find_or_shift(split3,uniprot)
+                t,mutations_shifted= self.find_and_shift(split1,uniprot)
+                t2,mutations_shifted_2=self.find_and_shift(split2,uniprot)
+                t3,mutations_shifted_3=self.find_and_shift(split3,uniprot)
                 if t and t2 and t3:
                     found_mut.append((row['Molecule ChEMBL ID'],mutation,mutations_shifted,mutations_shifted_2,mutations_shifted_3))
                     data.loc[index,'mutant_known']=True
@@ -237,7 +237,7 @@ class Mutation():
                     mutation = mut_match.group()
                     split = re.split(r'\/|-', mutation)
                     if len(split) == 1:
-                        t,shifted_mutation = self.find_or_shift(split[0], uniprot)
+                        t,shifted_mutation = self.find_and_shift(split[0], uniprot)
                         if t:
                             found_mut.append((row['Molecule ChEMBL ID'], mutation, shifted_mutation))
                             data.loc[index, 'mutant_known'] = True
@@ -250,8 +250,8 @@ class Mutation():
                             data.loc[index, 'shifted_mutation'] = shifted_mutation
                     elif len(split) == 2:
                         split1, split2 = split[0], split[1]
-                        t,mutations_shifted = self.find_or_shift(split1, uniprot)
-                        t2,mutations_shifted_2 = self.find_or_shift(split2, uniprot)
+                        t,mutations_shifted = self.find_and_shift(split1, uniprot)
+                        t2,mutations_shifted_2 = self.find_and_shift(split2, uniprot)
                         if t and t2:
                             found_mut.append((row['Molecule ChEMBL ID'], mutation, mutations_shifted, mutations_shifted_2))
                             data.loc[index, 'mutant_known'] = True
@@ -264,9 +264,9 @@ class Mutation():
                             data.loc[index, 'shifted_mutation'] = mutations_shifted+'/'+mutations_shifted_2
                     elif len(split) == 3:
                         split1, split2, split3 = split[0], split[1], split[2]
-                        t,mutations_shifted = self.find_or_shift(split1, uniprot)
-                        t2,mutations_shifted_2=self.find_or_shift(split2, uniprot)
-                        t3,mutations_shifted_3=self.find_or_shift(split3, uniprot)
+                        t,mutations_shifted = self.find_and_shift(split1, uniprot)
+                        t2,mutations_shifted_2=self.find_and_shift(split2, uniprot)
+                        t3,mutations_shifted_3=self.find_and_shift(split3, uniprot)
                         if t and t2 and t3:
                             found_mut.append((row['Molecule ChEMBL ID'], mutation, mutations_shifted, mutations_shifted_2, mutations_shifted_3))
                             data.loc[index, 'mutant_known'] = True

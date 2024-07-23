@@ -22,6 +22,7 @@ class Cleaner():
         """ Clean the data
             :param data: the data
             :return: the cleaned data
+            /home/luca/LAB/LAB_federica/chembl1865/EGFR.csv
         """
         data = self.remove_row(data)
         data = self.filter_data(data)
@@ -31,7 +32,7 @@ class Cleaner():
             data,mutation_report = mutation.get_mutations(data.copy())
         data = self.remove_duplicate(data)
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
-        directory_path = '/home/federica/'
+        directory_path = '/home/luca/LAB/LAB_federica/'
         self.save_data_report(directory_path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report)
         
         return data
@@ -156,19 +157,13 @@ class Cleaner():
             :param smiles: the SMILES
             :return: the SMILES without salts
         """
-         # Crea una nuova lista per i SMILES senza sali
         cleaned_smiles = []
-    
-    # Itera su ogni SMILES nel DataFrame
+
         for smiles in data['Smiles']:
-        # Divide il SMILES sui punti per separare i componenti
             components = smiles.split('.')
-        # Trova il componente più lungo
             main_component = max(components, key=len)
-        # Aggiunge il componente principale alla lista
             cleaned_smiles.append(main_component)
     
-    # Sostituisce la colonna 'Smiles' con i SMILES puliti
         data['Smiles'] = cleaned_smiles
         return data
     
@@ -233,37 +228,59 @@ class Cleaner():
             :return: the filtered data
         """
         # Filter the data based on the 'Standard Relation' column
-        if self.args.standard_type_act != 'None':
-            s_type = self.args.standard_type_act[0].split(',')
-            df_act = data[data['Standard Type'].isin(s_type)]
 
-        if self.args.standard_type_perc != 'None':
-            p_type = self.args.standard_type_perc[0].split(',')
-            df_perc = data[data['Standard Type'].isin(p_type)]
-            
-        df_perc_rev_act = df_perc[df_perc['Standard Type'] == 'Activity']
-        df_perc_rev_inact = df_perc[df_perc['Standard Type'] == 'Inhibition']
-        df_perc_rev = df_perc_rev_inact.copy()
+        s_type = self.args.standard_type_act[0].split(',')
+        df_act = data[data['Standard Type'].isin(s_type)]
 
-        #extrapolate data from these sets
+        p_type = self.args.standard_type_perc[0].split(',')
+        df_perc = data[data['Standard Type'].isin(p_type)]
+        
+        if 'Activity' not in df_perc['Standard Type'].unique():
+        # Se 'Activity' non è presente, filtra i dati in base alla soglia
+            df_perc_act = df_perc[df_perc['Standard Value'] > self.args.thr_perc]
+            df_perc_inact = df_perc[df_perc['Standard Value'] < self.args.thr_perc]
+        else:
+        # Se 'Activity' è presente, filtra i dati in base al tipo standard
+            df_perc_act = df_perc[df_perc['Standard Type'] != 'Activity']
+            df_perc_act = df_perc_act[df_perc_act['Standard Value'] > self.args.thr_perc]
+            df_perc_inact = df_perc[df_perc['Standard Type'] != 'Activity']
+            df_perc_inact = df_perc_inact[df_perc_inact['Standard Value'] < self.args.thr_perc]
+        
+            df_perc_act_i = df_perc[df_perc['Standard Type'] == 'Activity']
+            df_perc_act_i = df_perc_act_i[df_perc_act_i['Standard Value'] < self.args.thr_perc]
+            df_perc_inact_i = df_perc[df_perc['Standard Type'] == 'Activity']
+            df_perc_inact_i = df_perc_inact_i[df_perc_inact_i['Standard Value'] > self.args.thr_perc]
 
-        perc_rev_act_c = df_perc_rev_act['Standard Value'].count()
-        perc_rev_inact_c = df_perc_rev_inact['Standard Value'].count()
+        # Concatenare i risultati
+        df_perc_act = pd.concat([df_perc_act, df_perc_act_i], ignore_index=True)
+        df_perc_inact = pd.concat([df_perc_inact, df_perc_inact_i], ignore_index=True)
 
-        perc_rev_act_min = df_perc_rev_act['Standard Value'].min()
-        perc_rev_act_max = df_perc_rev_act['Standard Value'].max()
+        df_perc_rev_inact = df_perc_inact.copy()
+        df_perc_rev_inact['Class'] = 0
+        df_perc_rev_act = df_perc_act.copy()
+        df_perc_rev_act['Class'] = 1
 
-        perc_rev_inact_min = df_perc_rev_inact['Standard Value'].min()
-        perc_rev_inact_max = df_perc_rev_inact['Standard Value'].max()
+        perc_rev_act_c = df_perc_act['Standard Value'].count()
+        perc_rev_inact_c = df_perc_inact['Standard Value'].count()
 
-        # Filter the data based on the 'Standard Value' and relation column for ACTIVATION
-        df_act_rev_act = df_act[df_act['Standard Value'] <= self.args.thr_act]
-        df_act_rev_inact = df_act[df_act['Standard Value'] >= self.args.thr_act*10]
-        df_act_rev_inc = df_act.loc[(df_act['Standard Value'] > self.args.thr_act) & (df_act['Standard Value'] < self.args.thr_act * 10)]
-        df_act_rev = pd.concat([df_act_rev_act, df_act_rev_inact])
+        perc_rev_act_min = df_perc_act['Standard Value'].min()
+        perc_rev_act_max = df_perc_act['Standard Value'].max()
 
-        #extrapolate data from these sets
-        #act_rev_c = df_act_rev['Standard Value'].count()
+        perc_rev_inact_min = df_perc_inact['Standard Value'].min()
+        perc_rev_inact_max = df_perc_inact['Standard Value'].max()
+
+        df_act_act = df_act[df_act['Standard Value'] <= self.args.thr_act]
+        df_act_rev_act = df_act_act.copy()
+        df_act_rev_act['Class'] = 1
+        
+        df_act_inact = df_act[df_act['Standard Value'] >= self.args.thr_act*10]
+        df_act_rev_inact = df_act_inact.copy()
+        df_act_rev_inact['Class'] = 0
+
+        df_act_inc = df_act.loc[(df_act['Standard Value'] > self.args.thr_act) & (df_act['Standard Value'] < self.args.thr_act * 10)]
+        df_act_rev_inc = df_act_inc.copy()
+        df_act_rev_inc['Class'] = 2
+
         act_rev_act_c = df_act_rev_act['Standard Value'].count()
         act_rev_inact_c = df_act_rev_inact['Standard Value'].count()
 
@@ -273,13 +290,11 @@ class Cleaner():
         act_rev_inact_min = df_act_rev_inact['Standard Value'].min()
         act_rev_inact_max = df_act_rev_inact['Standard Value'].max()
 
-        # whole dataset
-        df_whole = pd.concat([df_act_rev, df_perc_rev])
-        #df_whole_act = df_act_rev_act.copy() #metti senza copia
+        df_whole = pd.concat([df_act_rev_act, df_act_rev_inact, df_act_rev_inc, df_perc_rev_act, df_perc_rev_inact])
         df_whole_inact = pd.concat([df_act_rev_inact, df_perc_rev_inact])
+        df_whole_act = pd.concat([df_act_rev_act, df_perc_rev_act])
 
-        df_act_ina_act = pd.concat([df_act_rev_act, df_act_rev_inact])
-        #df_perc_2 = df_perc_rev_inact.copy() #metti senza copia
+
 
         data_report = pd.DataFrame(columns=[
                                     'ratio active/inactive',
@@ -299,15 +314,12 @@ class Cleaner():
                                     'data_inhi_ina_min',
                                     'data_inhi_ina_max'])
         
-        # compute value
         ratio_act_ina = len(df_act_rev_act) / len(df_whole_inact)
         total_df_records = len(df_whole)
-        total_std_types = len(df_act_ina_act)
+        total_std_types = len(df_whole_act)
         total_inhibition = len(df_perc_rev_inact)
 
 
-        
-    # Create a dictionary of the data to add to the updater dataframe
         data_dict = {
             'ratio active/inactive':ratio_act_ina,
             'total_df_records':total_df_records,
@@ -330,7 +342,7 @@ class Cleaner():
         new_row=pd.DataFrame([data_dict])
         data_report = pd.concat([data_report, new_row], ignore_index=True)
 
-        return data_report, df_whole, df_act_rev_act, df_whole_inact, df_act_rev_inc
+        return data_report, df_whole, df_whole_act, df_whole_inact, df_act_rev_inc
     
     def save_data_report(self,path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report):
         dataset_path = os.path.join(path,'data', 'filtered')
@@ -359,4 +371,3 @@ class Cleaner():
             df.to_csv(full_path, index=True)
 
             #implementare il salvataggio in modo che sia possibile salvare i file senza sovrascrivere i file già presenti 
-            #aggiungere la colonna classe con 0:inattivo,1:attivo,2:moderatamente attivo

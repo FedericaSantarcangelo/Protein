@@ -31,7 +31,7 @@ def parser_args():
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     data_cleaning_args(parser)
     #mutation(parser)
-    parser.add_argument('--path', type = str, default = '/home/federica/chembl1865/EGFR.csv',
+    parser.add_argument('--path', type = str, default = '/home/luca/LAB/LAB_federica/chembl1865/EGFR.csv',
                         help = 'Specify the path of the data')
     print(parser.parse_args())
     return parser.parse_args()
