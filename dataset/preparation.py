@@ -27,6 +27,7 @@ class Cleaner():
         data = self.remove_row(data)
         data = self.filter_data(data)
         data = self.remove_salts(data)
+        mutation_report = None
         if self.args.mutation:
             mutation = Mutation(self.args, data) #il return di mutation è il dataframe per poi rimuovere i duplicati, gli args devono essere quelli relativi alla mutation
             data,mutation_report = mutation.get_mutations(data.copy())
@@ -344,7 +345,7 @@ class Cleaner():
 
         return data_report, df_whole, df_whole_act, df_whole_inact, df_act_rev_inc
     
-    def save_data_report(self,path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report):
+    def save_data_report(self,path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report=None):
         dataset_path = os.path.join(path,'data', 'filtered')
         report_path = os.path.join(path,'data', 'report')
 
@@ -354,13 +355,15 @@ class Cleaner():
             os.makedirs(report_path)
 
         filenames = {
-            'whole_dataset_EGFR.csv': whole_dataset,
-            'whole_act_EGFR.csv': whole_act,
-            'whole_inact_EGFR.csv': whole_inact,
-            'inc_data_EGFR.csv': inc_data,
-            'data_report_EGFR.csv': data_report,
-            'mutation_EGFR.csv': mutation_report
+            'whole_dataset_dir.csv': whole_dataset,
+            'whole_act_dir.csv': whole_act,
+            'whole_inact_dir.csv': whole_inact,
+            'inc_data_dir.csv': inc_data,
+            'data_report_dir.csv': data_report,
         }
+
+        if mutation_report is not None:
+            filenames['mutation_report_dir.csv'] = mutation_report
 
         for filename, df in filenames.items():
             if 'report' in filename:

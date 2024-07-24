@@ -51,29 +51,41 @@ def set_random_seed(seed: int) -> None:
 
 def load_data(data_path):
     """
-    Load the data from the path
+    Load the data from a directory or a file, reading header only from the first file
     :param data_path: the path of the data
     :return: the data
     """
-    if not os.path.exists(data_path):
-        print(f"Path {data_path} does not exist")
-        sys.exit(1)
+    if os.path.isdir(data_path):
+        files = sorted([os.path.join(data_path, f) for f in os.listdir(data_path) if f.endswith('.csv')])
+        comined_data = pd.DataFrame()
+        first_file = True
+
+        for file in files:
+            if first_file and 'part1' in file:
+                data = pd.read_csv(file, sep=';', low_memory=False).copy()
+                first_file = False
+            else:
+                data = pd.read_csv(file, sep=';', low_memory=False, header=None).copy() 
+            
+            comined_data = pd.concat([comined_data, data], ignore_index=True)
+    
+    elif os.path.isfile(data_path):
+        comined_data = pd.read_csv(data_path, sep=';', low_memory=False).copy()
+    
     else:
-        try:
-            data = pd.read_csv(data_path, sep=';', low_memory=False)
-            return data
-        except pd.errors.ParserError as e:
-            print(f"ParserError: {e}")
-    return None
+        print(f"Path {data_path} not found.")
+        sys.exit(1)
+    
+    return comined_data
 
 def main():
     args = parser_args()
 
-    data = load_data(args.path)
-    copy = data.copy()
+    data = load_data(args.path) #make a copy of the data directly during the loading
+    #copy = data.copy()
 
-    cleaner = Cleaner(args, copy)
-    cleaned_data = cleaner.clean_data(copy)
+    cleaner = Cleaner(args, data)
+    cleaned_data = cleaner.clean_data(data)
 
     df=process_molecules_and_calculate_descriptors(cleaned_data)
     print(df)
