@@ -178,13 +178,15 @@ class Mutation():
         param known_mutations: dictionary with known mutations
         """
         #create report
-        row_to_move = mut[mut['mutant'].isna()].copy()
-        row_to_move['mutation'] = False
+        row_to_move = mut[mut['mutant'] == ''].copy()
+        row_to_move['mutation'] = 'False'
+    # Concatenate the rows without mutations to the no_mut dataframe
         no_mut = pd.concat([no_mut, row_to_move])
-        mut = mut-row_to_move
+
+    # Remove the wild type rows without mutations from the mut dataframe
+        mut = mut.drop(row_to_move.index)
 
         mut = mut.sort_values(by='mutant')
-        #mut['Accession Code'] = None
 
         for index, row in mut.iterrows():
             mutant_value = row['mutant']

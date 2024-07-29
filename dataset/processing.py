@@ -7,6 +7,7 @@ from rdkit.Chem.MolStandardize import rdMolStandardize
 #from mordred import Calculator, descriptors
 import pandas as pd
 import numpy as np
+import os
 
 # Initialize the RDKit and Mordred descriptor calculators globally
 exclude_descriptors = ['BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
@@ -14,7 +15,7 @@ descriptor_names = [desc[0] for desc in Descriptors._descList if desc[0] not in 
 #rdkit_calculator = MoleculeDescriptors.MolecularDescriptorCalculator([desc[0] for desc in filtered_descriptors])
 #descriptor_names = [x[0] for x in Descriptors._descList]
 calculator = MoleculeDescriptors.MolecularDescriptorCalculator(descriptor_names)
-
+path = '/home/luca/LAB/LAB_federica/data'
 #mordred_calculator = Calculator(descriptors, ignore_3D=False)
 
 # Initialize Descriptors3D
@@ -99,10 +100,9 @@ def process_molecules_and_calculate_descriptors(df):
 
     results = []
     for mol_id, smiles in smiles_dict.items():
-        results.append(process_molecule_with_logging(mol_id,smiles))
+        results.append(process_molecule_with_logging(mol_id, smiles))
 
-    valid_results = [result for result in results if not np.isnan(result[1])]
-
+    
     # Add prefixes to descriptor names
     rdkit_descriptor_cols = ['rdkit_' + name for name in descriptor_names]
     rdkit_3d_descriptor_cols = ['rdkit_3d_' + name for name in sorted(descriptor_functions)]
@@ -111,7 +111,7 @@ def process_molecules_and_calculate_descriptors(df):
     # Combine all descriptor column names
     descriptor_cols = rdkit_descriptor_cols + rdkit_3d_descriptor_cols #+ mordred_descriptor_cols
 
-    descriptors_df = pd.DataFrame.from_records(valid_results, columns=['Molecule ChEMBL ID', 'Descriptors'])
+    descriptors_df = pd.DataFrame.from_records(results, columns=['Molecule ChEMBL ID', 'Descriptors'])
     descriptors_df = pd.concat([descriptors_df.drop(['Descriptors'], axis=1), descriptors_df['Descriptors'].apply(pd.Series)], axis=1)
     descriptors_df.columns = ['Molecule ChEMBL ID'] + descriptor_cols
 
@@ -119,5 +119,5 @@ def process_molecules_and_calculate_descriptors(df):
 
     # Remove the 'CalcMolDescriptors3D' column if it exists
     merged_df.drop(columns=['rdkit_3d_CalcMolDescriptors3D'], axis=1, inplace=True, errors='ignore')
-
+    merged_df.to_csv(os.path.join(path, 'final_df.csv'),index=False, encoding='utf-8')
     return merged_df
