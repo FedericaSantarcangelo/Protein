@@ -355,15 +355,15 @@ class Cleaner():
             os.makedirs(report_path)
 
         filenames = {
-            'whole_dataset_dir.csv': whole_dataset,
-            'whole_act_dir.csv': whole_act,
-            'whole_inact_dir.csv': whole_inact,
-            'inc_data_dir.csv': inc_data,
-            'data_report_dir.csv': data_report,
+            'whole_dataset_EGFR.csv': whole_dataset,
+            'whole_act_EGFR.csv': whole_act,
+            'whole_inact_EGFR.csv': whole_inact,
+            'inc_data_EGFR.csv': inc_data,
+            'data_report_EGFR.csv': data_report,
         }
 
         if mutation_report is not None:
-            filenames['mutation_report_dir.csv'] = mutation_report
+            filenames['mutation_EGFR.csv'] = mutation_report
 
         for filename, df in filenames.items():
             if 'report' in filename:
@@ -371,6 +371,6 @@ class Cleaner():
             else:
                 full_path=os.path.join(dataset_path, filename)
             
-            df.to_csv(full_path, index=True)
+            df.to_csv(full_path, index=False, encoding='utf-8')
 
             #implementare il salvataggio in modo che sia possibile salvare i file senza sovrascrivere i file già presenti 

@@ -48,12 +48,22 @@ class Mutation():
         the row is added to no_mut, otherwise to mut
         :param data: data dataframe
         :return: no_mut, mut
+
+        mutant['] = None
+        mutant['mutant'] = None 
+        mutant['shifted_mutation'] = None
         """
+        required_columns = ['mutation','mutant_known', 'mutant', 'shifted_mutation','Accession Code']
+        for column in required_columns:
+            if column not in data.columns:
+                data[column] = ''
+
+
         data['mutation'] = data['Assay Description'].apply(
             lambda x: bool(self.pattern.search(x)))
 
-        mut = data[data['mutation'] == True]
-        no_mut = data[data['mutation'] == False]
+        mut = data[data['mutation'] == True].copy()
+        no_mut = data[data['mutation'] == False].copy()
         return no_mut, mut
 
     def format_uniprot(self, uniprot: pd.DataFrame):
@@ -118,9 +128,9 @@ class Mutation():
         return: True se la mutazione è presente in uniprot, False altrimenti
         e la mutazione shiftata"""
         if mutation in uniprot_set:
-            return 'True', self.shift_mutation(mutation, self.shift)
+            return True, self.shift_mutation(mutation, self.shift)
         else:
-            return 'False', self.shift_mutation(mutation, self.shift)
+            return False, self.shift_mutation(mutation, self.shift)
 
     def find_mutant(self, mut: pd.DataFrame, all_mut: set):
         """
@@ -139,10 +149,6 @@ class Mutation():
         combined_pattern = re.compile('|'.join(patterns), re.IGNORECASE)
 
         mutant = mut.copy()
-        mutant['mutant_known'] = None
-        mutant['mutant'] = None 
-        mutant['shifted_mutation'] = None
-
         for index, row in mutant.iterrows():
             assay_description = row['Assay Description']
             match_mut = combined_pattern.finditer(assay_description)
@@ -155,13 +161,13 @@ class Mutation():
                     is_known, shifted = self.find_and_shift(mutation, all_mut)
                     mutations_found.append(mutation)
                     shifted_mutations.append(shifted)
-                    known_flags.append(is_known)
+                    known_flags.append(str(is_known))
 
             # Process found mutations
                 if mutations_found:
-                    mutant.loc[index, 'mutant_known'] = ';'.join(known_flags)
-                    mutant.loc[index, 'mutant'] = ';'.join(mutations_found)
-                    mutant.loc[index, 'shifted_mutation'] = ';'.join(shifted_mutations)
+                    mutant.loc[index, 'mutant_known'] = '/'.join(known_flags)
+                    mutant.loc[index, 'mutant'] = '/'.join(mutations_found)
+                    mutant.loc[index, 'shifted_mutation'] = '/'.join(shifted_mutations)
 
         return mutant
     
@@ -172,13 +178,13 @@ class Mutation():
         param known_mutations: dictionary with known mutations
         """
         #create report
-        row_to_move = mut[mut['shifted_mutation'].isna()].copy()
+        row_to_move = mut[mut['mutant'].isna()].copy()
         row_to_move['mutation'] = False
-        no_mut = pd.concat([no_mut, row_to_move], ignore_index=True)
-        mut = mut[mut['shifted_mutation'].notna()]
+        no_mut = pd.concat([no_mut, row_to_move])
+        mut = mut-row_to_move
 
         mut = mut.sort_values(by='mutant')
-        mut['Accession Code'] = None
+        #mut['Accession Code'] = None
 
         for index, row in mut.iterrows():
             mutant_value = row['mutant']
@@ -187,7 +193,7 @@ class Mutation():
             for key, mutations_list in known_mutations.items():
                 if mutant_value in mutations_list:
                     accession_code = key[0]  # Assuming the first element of the key tuple is the Accession Code
-                    mut.loc[index, 'Accession Code'] = accession_code
+                    mut.loc[index, 'Uniprot Accession Code'] = accession_code
                     break  # Stop searching once we find the Accession Code 
 
         final= pd.concat([no_mut,mut],ignore_index=True)
