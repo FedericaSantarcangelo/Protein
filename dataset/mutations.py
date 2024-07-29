@@ -8,8 +8,7 @@ class Mutation():
     def __init__(self, args: Namespace, data: pd.DataFrame):
         self.args = args
         self.data = data
-        self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type',
-                                   re.IGNORECASE) 
+        self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type') 
         self.shift=[-2,-1,1,2]
 
     def load_data(self):
@@ -146,7 +145,7 @@ class Mutation():
         r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Interval mutation, e.g., L747-T751del
         r'\bSins\.\b' 
         ]
-        combined_pattern = re.compile('|'.join(patterns), re.IGNORECASE)
+        combined_pattern = re.compile('|'.join(patterns))
 
         mutant = mut.copy()
         for index, row in mutant.iterrows():
@@ -177,25 +176,19 @@ class Mutation():
         param mut: dataframe with mutations
         param known_mutations: dictionary with known mutations
         """
-        #create report
-        row_to_move = mut[mut['mutant'] == ''].copy()
-        row_to_move['mutation'] = 'False'
-    # Concatenate the rows without mutations to the no_mut dataframe
-        no_mut = pd.concat([no_mut, row_to_move])
-
-    # Remove the wild type rows without mutations from the mut dataframe
-        mut = mut.drop(row_to_move.index)
 
         mut = mut.sort_values(by='mutant')
-
+        wt = re.compile(r'\b(wild type|wild_type)\b')
         for index, row in mut.iterrows():
             mutant_value = row['mutant']
+            if wt.search(row['Assay Description']):
+                mut.loc[index, 'mutant'] = 'wild type'
             if not row['mutant_known']:
                 continue 
             for key, mutations_list in known_mutations.items():
                 if mutant_value in mutations_list:
                     accession_code = key[0]  # Assuming the first element of the key tuple is the Accession Code
-                    mut.loc[index, 'Uniprot Accession Code'] = accession_code
+                    mut.loc[index, 'Accession Code'] = accession_code
                     break  # Stop searching once we find the Accession Code 
 
         final= pd.concat([no_mut,mut],ignore_index=True)

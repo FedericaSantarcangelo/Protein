@@ -1,9 +1,11 @@
 # Project README
 ## Description
 
-1. Step 1 clean and split data in train-validation-test
-2. Step 2 use Machine Learning model 
-3. Step 3 test it
+1. Clean dataset 
+2. Search for mutations
+3. Compute the rdkit's descriptors
+4. Split data in train, validation and test set
+5. Classification
 
 ## Installation
 

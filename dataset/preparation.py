@@ -22,7 +22,6 @@ class Cleaner():
         """ Clean the data
             :param data: the data
             :return: the cleaned data
-            /home/luca/LAB/LAB_federica/chembl1865/EGFR.csv
         """
         data = self.remove_row(data)
         data = self.filter_data(data)
@@ -372,5 +371,5 @@ class Cleaner():
                 full_path=os.path.join(dataset_path, filename)
             
             df.to_csv(full_path, index=False, encoding='utf-8')
-
+        return whole_dataset
             #implementare il salvataggio in modo che sia possibile salvare i file senza sovrascrivere i file già presenti 
