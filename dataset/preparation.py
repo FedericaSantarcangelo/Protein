@@ -6,6 +6,7 @@ from utils.args import data_cleaning_args
 import re
 from dataset.mutations import Mutation
 import ast
+from datetime import datetime
 
 def get_parser() -> ArgumentParser:
     """ Get the parser """
@@ -354,22 +355,25 @@ class Cleaner():
             os.makedirs(report_path)
 
         filenames = {
-            'whole_dataset_EGFR.csv': whole_dataset,
-            'whole_act_EGFR.csv': whole_act,
-            'whole_inact_EGFR.csv': whole_inact,
-            'inc_data_EGFR.csv': inc_data,
-            'data_report_EGFR.csv': data_report,
+            'whole_dataset_out.csv': whole_dataset,
+            'whole_act_out.csv': whole_act,
+            'whole_inact_out.csv': whole_inact,
+            'inc_data_out.csv': inc_data,
+            'data_report_out.csv': data_report,
         }
 
         if mutation_report is not None:
-            filenames['mutation_EGFR.csv'] = mutation_report
+            filenames['mutation_out.csv'] = mutation_report
 
         for filename, df in filenames.items():
             if 'report' in filename:
                 full_path=os.path.join(report_path, filename)
             else:
                 full_path=os.path.join(dataset_path, filename)
-            
-            df.to_csv(full_path, index=False, encoding='utf-8')
-        return whole_dataset
-            #implementare il salvataggio in modo che sia possibile salvare i file senza sovrascrivere i file già presenti 
+            if os.path.exists(full_path):
+                base, ext = os.path.splitext(full_path)
+                timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                full_path = f"{base}_{timestamp}{ext}"
+
+        df.to_csv(full_path, index=False, encoding='utf-8')
+        return whole_dataset  

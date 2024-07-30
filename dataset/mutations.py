@@ -102,7 +102,7 @@ class Mutation():
         :param shift: shift
         :return: shifted mutation
         """
-        if 'del' in mutation:
+        if 'del' in mutation or 'ins' in mutation or 'Del' in mutation:
             return mutation
         
         shifted_mutation = []
@@ -143,6 +143,8 @@ class Mutation():
         r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|-[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|)[A-Z]?\b',  # Double mutation, e.g., L747S-T751del or L747S/T751del
         r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?){1,2}\b',  # Triple mutation, e.g., L747S-T751del/M752del
         r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Interval mutation, e.g., L747-T751del
+        r'\b[A-Z]\d{1,4}-[A-Z] ins\b', # Insertion mutation, e.g., D770-N771 ins
+        r'\bDel\d{1,4}\b',  # Deletion mutation, e.g., Del19
         r'\bSins\.\b' 
         ]
         combined_pattern = re.compile('|'.join(patterns))

@@ -15,7 +15,10 @@ import numpy as np
 
 from dataset.preparation import Cleaner
 from dataset.processing import process_molecules_and_calculate_descriptors
-from utils.args import data_cleaning_args
+from utils.args import data_cleaning_args, model_args
+
+from models.classifiers import train_classifier
+from models.regressors import train_regressor
 
 
 conf_path = os.getcwd()
@@ -30,10 +33,10 @@ def parser_args():
     """
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     data_cleaning_args(parser)
-    #mutation(parser)
     parser.add_argument('--path', type = str, default = '/home/luca/LAB/LAB_federica/chembl1865/EGFR.csv',
                         help = 'Specify the path of the data')
-    print(parser.parse_args())
+    parser.add_argument('--model_type', type=str, choices=['classifier', 'regressor'], required=True, help='Type of model to train')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     return parser.parse_args()
 
 #per riproducibilità dei risultati con i modelli
@@ -88,7 +91,11 @@ def main():
     cleaned_data = cleaner.clean_data(data)
 
     df=process_molecules_and_calculate_descriptors(cleaned_data)
-    print(df)
+    
+    if args.model_type == 'classifier':
+        train_classifier(df,args)
+    elif args.model_type == 'regressor':
+        train_regressor(df,args)
 
 if __name__ == '__main__':
     main()
