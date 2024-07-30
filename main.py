@@ -15,7 +15,7 @@ import numpy as np
 
 from dataset.preparation import Cleaner
 from dataset.processing import process_molecules_and_calculate_descriptors
-from utils.args import data_cleaning_args, model_args
+from utils.args import *
 
 from models.classifiers import train_classifier
 from models.regressors import train_regressor
@@ -85,7 +85,6 @@ def main():
     args = parser_args()
 
     data = load_data(args.path) #make a copy of the data directly during the loading
-    #copy = data.copy()
 
     cleaner = Cleaner(args, data)
     cleaned_data = cleaner.clean_data(data)
