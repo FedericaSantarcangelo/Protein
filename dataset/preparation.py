@@ -29,8 +29,8 @@ class Cleaner():
         data = self.remove_salts(data)
         mutation_report = None
         if self.args.mutation:
-            mutation = Mutation(self.args, data) #il return di mutation è il dataframe per poi rimuovere i duplicati, gli args devono essere quelli relativi alla mutation
-            data,mutation_report = mutation.get_mutations(data.copy())
+            mutation_processor = Mutation(self.args)
+            data,mutation_report = mutation_processor.get_mutations(data.copy())
         data = self.remove_duplicate(data)
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
         directory_path = '/home/luca/LAB/LAB_federica/'
@@ -375,5 +375,5 @@ class Cleaner():
                 timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
                 full_path = f"{base}_{timestamp}{ext}"
 
-        df.to_csv(full_path, index=False, encoding='utf-8')
+            df.to_csv(full_path, index=False, encoding='utf-8')
         return whole_dataset  

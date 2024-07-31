@@ -5,9 +5,8 @@ import re
 import pandas as pd
 
 class Mutation():
-    def __init__(self, args: Namespace, data: pd.DataFrame):
+    def __init__(self, args: Namespace):
         self.args = args
-        self.data = data
         self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type') 
         self.shift=[-2,-1,1,2]
 
@@ -32,7 +31,7 @@ class Mutation():
         Get mutations main function
         :param uniprot: uniprot dataframe with mutations known
         :param data: data dataframe with mutations to be found
-        :return: mutations
+        :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
         uniprot = self.load_data()
         knonw_mutations,all_mut = self.format_uniprot(uniprot.copy())
@@ -47,10 +46,6 @@ class Mutation():
         the row is added to no_mut, otherwise to mut
         :param data: data dataframe
         :return: no_mut, mut
-
-        mutant['] = None
-        mutant['mutant'] = None 
-        mutant['shifted_mutation'] = None
         """
         required_columns = ['mutation','mutant_known', 'mutant', 'shifted_mutation','Accession Code']
         for column in required_columns:
@@ -143,7 +138,7 @@ class Mutation():
         r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|-[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|)[A-Z]?\b',  # Double mutation, e.g., L747S-T751del or L747S/T751del
         r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?){1,2}\b',  # Triple mutation, e.g., L747S-T751del/M752del
         r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Interval mutation, e.g., L747-T751del
-        r'\b[A-Z]\d{1,4}-[A-Z] ins\b', # Insertion mutation, e.g., D770-N771 ins
+        r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4} ins\b', # Insertion mutation, e.g., D770-N771 ins
         r'\bDel\d{1,4}\b',  # Deletion mutation, e.g., Del19
         r'\bSins\.\b' 
         ]

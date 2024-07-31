@@ -3,17 +3,13 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, Descriptors3D
 from rdkit.Chem.SaltRemover import SaltRemover
 from rdkit.ML.Descriptors import MoleculeDescriptors
-from rdkit.Chem.MolStandardize import rdMolStandardize
 from mordred import Calculator, descriptors
 import pandas as pd
 import numpy as np
 import os
 
-# Initialize the RDKit and Mordred descriptor calculators globally
 exclude_descriptors = ['BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
 descriptor_names = [desc[0] for desc in Descriptors._descList if desc[0] not in exclude_descriptors]
-#rdkit_calculator = MoleculeDescriptors.MolecularDescriptorCalculator([desc[0] for desc in filtered_descriptors])
-#descriptor_names = [x[0] for x in Descriptors._descList]
 calculator = MoleculeDescriptors.MolecularDescriptorCalculator(descriptor_names)
 path = '/home/luca/LAB/LAB_federica/data'
 mordred_calculator = Calculator(descriptors, ignore_3D=False)
