@@ -346,6 +346,15 @@ class Cleaner():
         return data_report, df_whole, df_whole_act, df_whole_inact, df_act_rev_inc
     
     def save_data_report(self,path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report=None):
+        """ Save the data report and the dataset in the specified path 
+            :param path: the path
+            :param data_report: the data report
+            :param whole_dataset: the whole dataset
+            :param whole_act: the whole active dataset
+            :param whole_inact: the whole inactive dataset
+            :param inc_data: the inconclusive dataset
+            :param mutation_report: the mutation report
+        """
         dataset_path = os.path.join(path,'data', 'filtered')
         report_path = os.path.join(path,'data', 'report')
 
