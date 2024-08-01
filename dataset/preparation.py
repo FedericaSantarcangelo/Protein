@@ -3,10 +3,11 @@ import os
 import numpy as np
 from argparse import Namespace, ArgumentParser
 from utils.args import data_cleaning_args
+from utils.file_utils import save_data_report
 import re
 from dataset.mutations import Mutation
 import ast
-from datetime import datetime
+
 
 def get_parser() -> ArgumentParser:
     """ Get the parser """
@@ -15,9 +16,8 @@ def get_parser() -> ArgumentParser:
     return parser
 
 class Cleaner():
-    def __init__(self, args: Namespace, data: pd.DataFrame):
+    def __init__(self,args: Namespace):
         self.args = args
-        self.data = data
 
     def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Clean the data
@@ -27,14 +27,20 @@ class Cleaner():
         data = self.remove_row(data)
         data = self.filter_data(data)
         data = self.remove_salts(data)
-        mutation_report = None
         if self.args.mutation:
             mutation_processor = Mutation(self.args)
-            data,mutation_report = mutation_processor.get_mutations(data.copy())
+            data = mutation_processor.get_mutations(data.copy())
         data = self.remove_duplicate(data)
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
-        directory_path = '/home/luca/LAB/LAB_federica/'
-        self.save_data_report(directory_path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report)
+        
+        filenames = {
+            'whole_dataset_out.csv': whole_dataset,
+            'whole_act_out.csv': whole_act,
+            'whole_inact_out.csv': whole_inact,
+            'inc_data_out.csv': inc_data,
+            'data_report_out.csv': data_report,
+        }
+        save_data_report(self.args.path_output,filenames)
         
         return data
 
@@ -345,44 +351,4 @@ class Cleaner():
 
         return data_report, df_whole, df_whole_act, df_whole_inact, df_act_rev_inc
     
-    def save_data_report(self,path, data_report, whole_dataset, whole_act, whole_inact, inc_data,mutation_report=None):
-        """ Save the data report and the dataset in the specified path 
-            :param path: the path
-            :param data_report: the data report
-            :param whole_dataset: the whole dataset
-            :param whole_act: the whole active dataset
-            :param whole_inact: the whole inactive dataset
-            :param inc_data: the inconclusive dataset
-            :param mutation_report: the mutation report
-        """
-        dataset_path = os.path.join(path,'data', 'filtered')
-        report_path = os.path.join(path,'data', 'report')
-
-        if not os.path.exists(dataset_path):
-            os.makedirs(dataset_path)
-        if not os.path.exists(report_path):
-            os.makedirs(report_path)
-
-        filenames = {
-            'whole_dataset_out.csv': whole_dataset,
-            'whole_act_out.csv': whole_act,
-            'whole_inact_out.csv': whole_inact,
-            'inc_data_out.csv': inc_data,
-            'data_report_out.csv': data_report,
-        }
-
-        if mutation_report is not None:
-            filenames['mutation_out.csv'] = mutation_report
-
-        for filename, df in filenames.items():
-            if 'report' in filename:
-                full_path=os.path.join(report_path, filename)
-            else:
-                full_path=os.path.join(dataset_path, filename)
-            if os.path.exists(full_path):
-                base, ext = os.path.splitext(full_path)
-                timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                full_path = f"{base}_{timestamp}{ext}"
-
-            df.to_csv(full_path, index=False, encoding='utf-8')
-        return whole_dataset  
+ 

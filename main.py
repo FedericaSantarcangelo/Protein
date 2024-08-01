@@ -16,6 +16,7 @@ import numpy as np
 from dataset.preparation import Cleaner
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.args import data_cleaning_args, model_args
+from utils.file_utils import load_data
 
 from models.classifiers import train_classifier
 from models.regressors import train_regressor
@@ -53,42 +54,14 @@ def set_random_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
     except BaseException:
         print("Could not set cuda seed.")
-
-def load_data(data_path):
-    """
-    Load the data from a directory or a file, reading header only from the first file
-    :param data_path: the path of the data
-    :return: the data
-    """
-    if os.path.isdir(data_path):
-        files = sorted([os.path.join(data_path, f) for f in os.listdir(data_path) if f.endswith('.csv')])
-        comined_data = pd.DataFrame()
-        first_file = True
-
-        for file in files:
-            if first_file and 'part1' in file:
-                data = pd.read_csv(file, sep=';', low_memory=False).copy()
-                first_file = False
-            else:
-                data = pd.read_csv(file, sep=';', low_memory=False, header=None).copy() 
-            
-            comined_data = pd.concat([comined_data, data], ignore_index=True)
-    
-    elif os.path.isfile(data_path):
-        comined_data = pd.read_csv(data_path, sep=';', low_memory=False).copy()
-    
-    else:
-        print(f"Path {data_path} not found.")
-        sys.exit(1)
-    
-    return comined_data
+        
 
 def main():
     args = parser_args()
 
     data = load_data(args.path) 
 
-    cleaner = Cleaner(args, data)
+    cleaner = Cleaner(args)
     cleaned_data = cleaner.clean_data(data)
 
     df=process_molecules_and_calculate_descriptors(cleaned_data)

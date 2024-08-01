@@ -27,6 +27,8 @@ def data_cleaning_args(parser : ArgumentParser) -> None:
     parser.add_argument('--path_uniprot', type = str, default = '/home/federica/LAB/df_uniprot_details.tsv', help = 'Specify the path of uniprot file')
     
     parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')
+
+    parser.add_argument('--path_output', type = str, default = '/home/luca/LAB/LAB_federica/', help = 'Specify the path where to save the mutation report')
         
         
 def model_args(parser: ArgumentParser) -> None:

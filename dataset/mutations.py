@@ -3,6 +3,8 @@ import os
 import sys
 import re
 import pandas as pd
+from utils.file_utils import load_uniprot_data
+from utils.mutation import save_mutation_target
 
 class Mutation():
     def __init__(self, args: Namespace):
@@ -10,21 +12,6 @@ class Mutation():
         self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type') 
         self.shift=[-2,-1,1,2]
 
-    def load_data(self):
-        """
-        Load data uniprot
-        :return: data
-        """
-        if not os.path.exists(self.args.path_uniprot):
-            print(f"Path {self.args.path_uniprot} does not exist")
-            sys.exit(1)
-        else:
-            try:
-                uniprot = pd.read_csv(self.args.path_uniprot, sep='\t', dtype='str',low_memory=False)
-                return uniprot
-            except pd.errors.ParserError as e:
-                print(f"ParserError: {e}")
-        return None
         
     def get_mutations(self, data: pd.DataFrame):
         """
@@ -33,12 +20,13 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
-        uniprot = self.load_data()
+        uniprot = load_uniprot_data(self.args.path_uniprot)
         knonw_mutations,all_mut = self.format_uniprot(uniprot.copy())
         no_mut,mut=self.split_data(data.copy())
         mutant = self.find_mutant(mut,all_mut)
         final, mutation_report = self.format_output(no_mut,mutant,knonw_mutations)
-        return final, mutation_report
+        save_mutation_target(self.args, mutation_report)
+        return final
     
     def split_data(self, data: pd.DataFrame):
         """
@@ -51,7 +39,6 @@ class Mutation():
         for column in required_columns:
             if column not in data.columns:
                 data[column] = ''
-
 
         data['mutation'] = data['Assay Description'].apply(
             lambda x: bool(self.pattern.search(x)))
@@ -134,13 +121,17 @@ class Mutation():
         :return: dataframe with mutations
         """
         patterns = [
-        r'\b[A-Z]\d{1,4}[A-Z]\b',  # Single mutation, e.g., L747S
-        r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|-[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|)[A-Z]?\b',  # Double mutation, e.g., L747S-T751del or L747S/T751del
-        r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?){1,2}\b',  # Triple mutation, e.g., L747S-T751del/M752del
-        r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Interval mutation, e.g., L747-T751del
-        r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4} ins\b', # Insertion mutation, e.g., D770-N771 ins
-        r'\bDel\d{1,4}\b',  # Deletion mutation, e.g., Del19
-        r'\bSins\.\b' 
+        r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
+        r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|-[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|)[A-Z]?\b',  # Mutazione doppia, e.g., L747S-T751del o L747S/T751del
+        r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?){1,2}\b',  # Mutazione tripla, e.g., L747S-T751del/M752del
+        r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Mutazione d'intervallo, e.g., L747-T751del
+        r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins', # Mutazione di inserzione, e.g., D770-N771ins
+        r'\bDel\s*\d{1,4}\b',  # Delezione, e.g., Del19
+        r'\bSins\.\b',  # Inserzione, e.g., Sins.
+        r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\s*ins',  # Inserzione tra due amminoacidi, e.g., A763_Y764ins
+        r'\bDel [A-Z]\d{1,4}/[A-Z]\d{1,4}\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., Del E746/A750
+        r'\bex\d{1,2}del\b',  # Delezione con notazione esone, e.g., ex19del
+        r'\bdel\s*(\d{1,4} to \d{1,4}\s*)\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
         ]
         combined_pattern = re.compile('|'.join(patterns))
 
@@ -176,18 +167,24 @@ class Mutation():
 
         mut = mut.sort_values(by='mutant')
         wt = re.compile(r'\b(wild type|wild_type)\b')
+
         for index, row in mut.iterrows():
             mutant_value = row['mutant']
-            if wt.search(row['Assay Description']):
+            assay_description = row['Assay Description']
+        
+        # Set 'wild type' if 'mutation' is empty and 'Assay Description' contains 'wild type'
+            if row['mutant'] == '' and wt.search(assay_description):
                 mut.loc[index, 'mutant'] = 'wild type'
-            if not row['mutant_known']:
-                continue 
+
+        # Check known mutations and assign accession code
+            if not row.get('mutant_known', False):
+                continue
+        
             for key, mutations_list in known_mutations.items():
                 if mutant_value in mutations_list:
                     accession_code = key[0]  # Assuming the first element of the key tuple is the Accession Code
-                    mut.loc[index, 'Accession Code'] = accession_code
+                    mut.at[index, 'Accession Code'] = accession_code
                     break  # Stop searching once we find the Accession Code 
-
+        no_mut.loc[:,'mutant'] = 'mixed'
         final= pd.concat([no_mut,mut],ignore_index=True)
-
         return final,mut
