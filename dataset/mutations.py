@@ -91,8 +91,10 @@ class Mutation():
         if re.match(r'\b[A-Z]\d{1,4}[A-Z]\b', mutation):
             let_s,num,let_e = mutation[0],mutation[1:-1],mutation[-1]
             for s in shift:
-                shifted_num = str(int(num) + s)
-                shifted_mutation.append(f"{let_s}{shifted_num}{let_e}")
+                shifted_num = int(num) + s
+                if shifted_num >= 0:
+                    shifted_num = str(shifted_num)
+                    shifted_mutation.append(f"{let_s}{shifted_num}{let_e}")
             return ','.join(shifted_mutation)
         
     # Special case (e.g., Sins.)

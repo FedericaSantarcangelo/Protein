@@ -49,7 +49,7 @@ class Cleaner():
             :param data: the data
             :return: the data without missing values
         """
-        
+        #aggiungo controllo su queste colonne per i valori a nan
         data = data.dropna(subset=['Smiles',
                             'Standard Type',
                             'Standard Relation',
