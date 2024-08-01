@@ -84,7 +84,7 @@ class Mutation():
         :param shift: shift
         :return: shifted mutation
         """
-        if 'del' in mutation or 'ins' in mutation or 'Del' in mutation:
+        if 'del' in mutation or 'ins' in mutation or 'Del' in mutation or 'd' in mutation:
             return mutation
         
         shifted_mutation = []
@@ -132,6 +132,7 @@ class Mutation():
         r'\bDel [A-Z]\d{1,4}/[A-Z]\d{1,4}\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., Del E746/A750
         r'\bex\d{1,2}del\b',  # Delezione con notazione esone, e.g., ex19del
         r'\bdel\s*(\d{1,4} to \d{1,4}\s*)\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
+        r'\bd(\d{1,4}-\d{1,4})\/([A-Z]\d{1,4}[A-Z])\b',  # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
         ]
         combined_pattern = re.compile('|'.join(patterns))
 

@@ -24,7 +24,7 @@ def save_mutation_target(args, data: pd.DataFrame, id_column: str='Target ChEMBL
         grouped = drop_dupicates.groupby(id_column)
 
         for name, group in grouped:
-            output_path = os.path.join(args.path_output, f"{name}.csv")
+            output_path = os.path.join(full_path, f"{name}.csv")
             group.to_csv(output_path, index=False)
     except ValueError as e:
         print(f"Error: {e}")
