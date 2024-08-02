@@ -3,7 +3,7 @@ import os
 import sys
 import re
 import pandas as pd
-from utils.file_utils import load_uniprot_data
+from utils.file_utils import load_file, save_other_files
 from utils.mutation import save_mutation_target
 
 class Mutation():
@@ -20,9 +20,13 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
-        uniprot = load_uniprot_data(self.args.path_uniprot)
-        knonw_mutations,all_mut = self.format_uniprot(uniprot.copy())
+        uniprot = load_file(self.args.path_uniprot)
+        mapping = load_file(self.args.path_mapping)
+        organism = load_file(self.args.path_organism)
+        knonw_mutations,all_mut,merged = self.format_uniprot(uniprot.copy(), mapping.copy(), organism.copy())
+        save_other_files(merged, self.args.path_output, 'merged')
         no_mut,mut=self.split_data(data.copy())
+        save_other_files(no_mut, self.args.path_output, 'mixed')
         mutant = self.find_mutant(mut,all_mut)
         final, mutation_report = self.format_output(no_mut,mutant,knonw_mutations)
         save_mutation_target(self.args, mutation_report)
@@ -47,7 +51,7 @@ class Mutation():
         no_mut = data[data['mutation'] == False].copy()
         return no_mut, mut
 
-    def format_uniprot(self, uniprot: pd.DataFrame):
+    def format_uniprot(self, uniprot: pd.DataFrame, mapping: pd.DataFrame, organism: pd.DataFrame):
         """
         Format uniprot dataframe
         :param uniprot: uniprot dataframe
@@ -74,7 +78,10 @@ class Mutation():
             for mutation in mutations:
                 all_mutations.add(mutation)
 
-        return mutation_dict,all_mutations
+        merged_df = pd.merge(mapping, organism, left_on='UniProtID', right_on='Entry')
+        output_df = merged_df[['UniProtID', 'Target_ChEMBLID', 'Mutations']]
+
+        return mutation_dict,all_mutations,output_df
     
         
     def shift_mutation(self, mutation: str, shift: list):

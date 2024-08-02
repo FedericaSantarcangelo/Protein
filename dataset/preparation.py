@@ -3,7 +3,7 @@ import os
 import numpy as np
 from argparse import Namespace, ArgumentParser
 from utils.args import data_cleaning_args
-from utils.file_utils import save_data_report
+from utils.file_utils import save_data_report, save_other_files
 import re
 from dataset.mutations import Mutation
 import ast
@@ -49,17 +49,18 @@ class Cleaner():
             :param data: the data
             :return: the data without missing values
         """
-        #aggiungo controllo su queste colonne per i valori a nan
+        # Remove the rows with missing values
         data = data.dropna(subset=['Smiles',
                             'Standard Type',
                             'Standard Relation',
                             'Standard Value',
                             'Standard Units'])
-        
+        # Remove the rows with negative values
         data = data.loc[data['Standard Value'] > 0]
 
         """ Remove the rows with no interesting values """
         # Filter based on the parser arguments
+        other = data.copy()
         if self.args.assay_type != 'None':
             data = data.loc[data['Assay Type'] == self.args.assay_type]
         if self.args.assay_organism != 'None':
@@ -69,6 +70,9 @@ class Cleaner():
         if self.args.target_type != 'None':
             data = data.loc[data['Target Type'] == self.args.target_type]
 
+        other = other.loc[~other.index.isin(data.index)] # semi_sintetic_data
+        other = self.remove_duplicate(other)
+        save_other_files(other, self.args.path_output, 'semi_sintetic_data')
         return data
 
     def filter_data(self, data: pd.DataFrame):

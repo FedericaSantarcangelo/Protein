@@ -3,57 +3,70 @@ import pandas as pd
 import sys
 from datetime import datetime
 
-def load_data(data_path: str, sep: str = ';', low_memory: bool = False) -> pd.DataFrame:
+def detect_delimiter(path: str, num_lines = 5) -> str:
     """
-    Load the data from a directory or a file, reading header only from the first file
-    :param data_path: the path of the data
-    :param sep: the separator of the data
-    :param low_memory: whether to use low memory mode or not
-    :return: the data
+    Detect the delimiter of the file by reading the first num_lines of the file
+    :param path: the path of the file
+    :param num_lines: the number of lines to read
+    :return: the delimiter of the file
     """
-    combined_data = pd.DataFrame()
+    delimiters = [';', ',', '\t', '|']
+    with open(path, 'r') as f:
+        lines = [f.readline() for _ in range(num_lines)]
+    for delimiter in delimiters:
+        if all([delimiter in line for line in lines]):
+            return delimiter
+    return '\t' # Assuming \t as default delimiter if no delimiter is found
 
-    if os.path.isdir(data_path):
-        files = sorted([os.path.join(data_path, f) for f in os.listdir(data_path) if f.endswith('.csv')])
-        for idx, file in enumerate(files):
-            try:
-                if idx == 0:
-                    data = pd.read_csv(file, sep=sep, low_memory=low_memory).copy()
-                else:
-                    data = pd.read_csv(file, sep=sep, low_memory=low_memory, header=None).copy()
-                combined_data = pd.concat([combined_data, data], ignore_index=True)
-            except Exception as e:
-                print(f"Errore durante il caricamento del file {file}: {e}")
-    elif os.path.isfile(data_path):
-        try:
-            combined_data = pd.read_csv(data_path, sep=sep, low_memory=low_memory)
-        except Exception as e:
-            print(f"Errore durante il caricamento del file {data_path}: {e}")
-    else:
-        print(f"Il percorso {data_path} non è stato trovato.")
-        sys.exit(1)
-
-    return combined_data
-
-def load_uniprot_data(file_path: str, sep: str = '\t') -> pd.DataFrame:
+def load_file(path : str, delimiter = None, header='infer'):
     """
-    Carica i dati Uniprot da un file.
-
-    :param file_path: percorso del file Uniprot
-    :param sep: separatore per il file Uniprot
-    :return: DataFrame con i dati Uniprot
+    Main function to load the data of any kind like csv, tsv, excel
+    :param path: the path of the file 
+    :param delimiter: the delimiter of the file
+    :param header: the header of the file
     """
-    if not os.path.exists(file_path):
-        print(f"Il percorso {file_path} non esiste")
-        sys.exit(1)
-    try:
-        uniprot = pd.read_csv(file_path, sep=sep, dtype='str', low_memory=False)
-        return uniprot
-    except pd.errors.ParserError as e:
-        print(f"Errore di parsing nel file {file_path}: {e}")
+    try: 
+        if delimiter is None:
+            delimiter = detect_delimiter(path)
+        
+        df = pd.read_csv(path, delimiter = delimiter, header = header, low_memory=False)
+        return df
     except Exception as e:
-        print(f"Errore durante il caricamento del file {file_path}: {e}")
-    return pd.DataFrame()
+        print(f"Error during the loading of the file {path}: {e}")
+        sys.exit(1)
+
+def process_directory(path: str, cleaner):
+    """"
+    Process the directory containing the files to be cleaned: for each file in the directory,
+    apply the cleaning function and save the cleaned file
+    :param path: the path of the directory
+    :param cleaner: the cleaner instance
+    return: the cleaned dataframe
+    """
+    from dataset.preparation import Cleaner
+
+    return
+
+def save_other_files(file: pd.DataFrame, output_path: str, name: str):
+    """
+    Save the file different from mutation such mixed and semi_sintetic_data
+    :param file: the file to be saved
+    :param output_path: the output path
+    :param name: the name of the file
+    """
+
+    full_path = os.path.join(output_path + 'other', name)
+    if not os.path.exists(full_path):
+        os.makedirs(full_path)
+    ext = '.csv'
+    if os.path.exists(full_path):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        full_path = f"{full_path}/{name}{timestamp}{ext}"
+
+    try:
+        file.to_csv(full_path, index=False, encoding='utf-8')
+    except Exception as e:
+        print(f"Error during the saving of the file {full_path}: {e}")
 
 def save_data_report(base_path: str, data_dict: dict):
     """
