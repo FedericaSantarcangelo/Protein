@@ -27,7 +27,7 @@ def parser_args():
     """
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     data_cleaning_args(parser)
-    parser.add_argument('--path_db', type = str, default = '/home/luca/LAB/LAB_federica/chembl1865/HDAC6.csv',
+    parser.add_argument('--path_db', type = str, default = '/home/luca/LAB/LAB_federica/chembl1865/EGFR.csv',
                         help = 'Specify the path of the database')
     parser.add_argument('--model', type=str, choices=['classifier', 'regressor'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')

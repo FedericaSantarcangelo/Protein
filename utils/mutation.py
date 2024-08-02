@@ -1,6 +1,17 @@
 import os 
 import pandas as pd
 
+def marge_data(organism: pd.DataFrame, mapping: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merge two dataframes on a specific column
+    :param organism: the first dataframe
+    :param mapping: the second dataframe
+    :param on: the column to merge the dataframes
+    :return: the merged dataframe
+    """
+
+    merged_df = pd.merge(mapping, organism, left_on='UniProtID', right_on='Entry')
+    return merged_df[['UniProtID', 'Target_ChEMBLID', 'Mutations']]
 
 def save_mutation_target(args, data: pd.DataFrame, id_column: str='Target ChEMBL ID') -> None:
     """
