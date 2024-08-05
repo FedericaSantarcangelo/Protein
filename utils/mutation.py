@@ -9,7 +9,6 @@ def marge_data(organism: pd.DataFrame, mapping: pd.DataFrame) -> pd.DataFrame:
     :param on: the column to merge the dataframes
     :return: the merged dataframe
     """
-
     merged_df = pd.merge(mapping, organism, left_on='UniProtID', right_on='Entry')
     return merged_df[['UniProtID', 'Target_ChEMBLID', 'Mutations']]
 

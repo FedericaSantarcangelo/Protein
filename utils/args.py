@@ -26,7 +26,7 @@ def data_cleaning_args(parser : ArgumentParser) -> None:
                         help="relation priority")
     parser.add_argument('--sty_pri', type=str, default="{'IC50':1, 'Ki':2, 'Kd':3, 'EC50':4, 'Potency':5,'Inhibition':6, 'Activity':7}",
                         help="standard type priority")
-    parser.add_argument('--src_pri', type=str, default="{'Scientific Literature':1, 'BindingDB Database':2, 'Fraunhofer HDAC6':3}",
+    parser.add_argument('--src_pri', type=str, default="{'Scientific Literature':1, 'BindingDB Database':2, 'Fraunhofer HDAC6':3, 'PubChem':4}",
                         help="source priority")
     
     # Add arguments for the path of the files

@@ -20,11 +20,10 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
-        uniprot = load_file(self.args.path_uniprot)
-        mapping = load_file(self.args.path_mapping)
-        organism = load_file(self.args.path_organism)
-        merged_uniprot_mapping = marge_data(organism, mapping)
-        save_other_files(merged_uniprot_mapping, self.args.path_output, 'merged_uniprot_mapping') # Save the merged file just to check it
+        uniprot, mapping, organism = load_file(self.args.path_uniprot), load_file(self.args.path_mapping), load_file(self.args.path_organism)
+        merged_uniprot_mapping = marge_data(organism, mapping, uniprot)
+        if not os.path.exists(self.args.path_output+'merged_uniprot_mapping'):
+            save_other_files(merged_uniprot_mapping, self.args.path_output, 'merged_uniprot_mapping') # Save the merged file just to check it
         knonw_mutations,all_mut = self.format_uniprot(uniprot.copy())
         no_mut,mut=self.split_data(data.copy())
         mutant = self.find_mutant(mut,all_mut)
