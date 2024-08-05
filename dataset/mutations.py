@@ -21,10 +21,10 @@ class Mutation():
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
         uniprot, mapping, organism = load_file(self.args.path_uniprot), load_file(self.args.path_mapping), load_file(self.args.path_organism)
-        merged_uniprot_mapping = marge_data(organism, mapping, uniprot)
-        if not os.path.exists(self.args.path_output+'merged_uniprot_mapping'):
-            save_other_files(merged_uniprot_mapping, self.args.path_output, 'merged_uniprot_mapping') # Save the merged file just to check it
-        knonw_mutations,all_mut = self.format_uniprot(uniprot.copy())
+        merged_uniprot = marge_data(organism, mapping, uniprot)
+        if not os.path.exists(self.args.path_output+'merged_uniprot'):
+            save_other_files(merged_uniprot, self.args.path_output, 'merged_uniprot_mapping') # Save the merged file just to check it
+        knonw_mutations,all_mut = self.format_uniprot(merged_uniprot)
         no_mut,mut=self.split_data(data.copy())
         mutant = self.find_mutant(mut,all_mut)
         final, mutation_report, no_mut = self.format_output(no_mut,mutant,knonw_mutations)
@@ -159,9 +159,18 @@ class Mutation():
 
             # Process found mutations
                 if mutations_found:
-                    mutant.loc[index, 'mutant_known'] = '/'.join(known_flags)
-                    mutant.loc[index, 'mutant'] = '/'.join(mutations_found)
-                    mutant.loc[index, 'shifted_mutation'] = '/'.join(shifted_mutations)
+                    if len(mutations_found) > 3: 
+                        grouped_mutations = ["/".join(mutations_found[i:i+2]) for i in range(0, len(mutations_found), 2)]
+                        grouped_shifted = ["/".join(shifted_mutations[i:i+2]) for i in range(0, len(shifted_mutations), 2)]
+                        grouped_known = ["/".join(known_flags[i:i+2]) for i in range(0, len(known_flags), 2)]
+                        
+                        mutant.loc[index, 'mutant_known'] = '-'.join(grouped_known)
+                        mutant.loc[index, 'mutant'] = '-'.join(grouped_mutations)
+                        mutant.loc[index, 'shifted_mutation'] = '-'.join(grouped_shifted)
+                    else:
+                        mutant.loc[index, 'mutant_known'] = '/'.join(known_flags)
+                        mutant.loc[index, 'mutant'] = '/'.join(mutations_found)
+                        mutant.loc[index, 'shifted_mutation'] = '/'.join(shifted_mutations)
 
         return mutant
     

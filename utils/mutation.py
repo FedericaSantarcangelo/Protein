@@ -1,7 +1,7 @@
 import os 
 import pandas as pd
 
-def marge_data(organism: pd.DataFrame, mapping: pd.DataFrame) -> pd.DataFrame:
+def marge_data(organism: pd.DataFrame, mapping: pd.DataFrame, uniprot: pd.DataFrame) -> pd.DataFrame:
     """
     Merge two dataframes on a specific column
     :param organism: the first dataframe
@@ -9,8 +9,10 @@ def marge_data(organism: pd.DataFrame, mapping: pd.DataFrame) -> pd.DataFrame:
     :param on: the column to merge the dataframes
     :return: the merged dataframe
     """
-    merged_df = pd.merge(mapping, organism, left_on='UniProtID', right_on='Entry')
-    return merged_df[['UniProtID', 'Target_ChEMBLID', 'Mutations']]
+    organism.rename(columns={'Entry': 'Accession Code'}, inplace=True)
+    mapping.rename(columns={'UniProtID': 'Accession Code','Target_ChEMBLID':'ChEMBL DB'}, inplace=True)
+    merged_df = organism.merge(mapping, on='Accession Code', how='outer').merge(uniprot, on=['Accession Code','ChEMBL DB'], how='outer')
+    return merged_df[['Accession Code', 'ChEMBL DB', 'Known mutations']]
 
 def save_mutation_target(args, data: pd.DataFrame, id_column: str='Target ChEMBL ID') -> None:
     """
