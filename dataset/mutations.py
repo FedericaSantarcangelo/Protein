@@ -9,7 +9,7 @@ from utils.mutation import save_mutation_target, marge_data
 class Mutation():
     def __init__(self, args: Namespace):
         self.args = args
-        self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type') 
+        self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type|\b[A-Z]\d{1,4}-[A-Z]\d{1,4}') 
         self.shift=[-2,-1,1,2]
 
         
@@ -88,7 +88,7 @@ class Mutation():
         :param shift: shift
         :return: shifted mutation
         """
-        if 'del' in mutation or 'ins' in mutation or 'Del' in mutation or 'd' in mutation:
+        if 'del' in mutation or 'ins' in mutation or 'Del' in mutation or 'd' in mutation or 'Sins' in mutation:
             return mutation
         
         shifted_mutation = []
@@ -102,8 +102,6 @@ class Mutation():
             return ','.join(shifted_mutation)
         
     # Special case (e.g., Sins.)
-        elif mutation.lower() == 'sins.':
-            return mutation
         else:
             raise ValueError(f"Mutation {mutation} is not in the correct format")
         
@@ -127,18 +125,18 @@ class Mutation():
         :return: dataframe with mutations
         """
         patterns = [
-        r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
-        r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|-[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?|)[A-Z]?\b',  # Mutazione doppia, e.g., L747S-T751del o L747S/T751del
-        r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?){1,2}\b',  # Mutazione tripla, e.g., L747S-T751del/M752del
-        r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Mutazione d'intervallo, e.g., L747-T751del
-        r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins', # Mutazione di inserzione, e.g., D770-N771ins
-        r'\bDel\s*\d{1,4}\b',  # Delezione, e.g., Del19
-        r'\bSins\.\b',  # Inserzione, e.g., Sins.
-        r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\s*ins',  # Inserzione tra due amminoacidi, e.g., A763_Y764ins
-        r'\bDel [A-Z]\d{1,4}/[A-Z]\d{1,4}\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., Del E746/A750
-        r'\bex\d{1,2}del\b',  # Delezione con notazione esone, e.g., ex19del
-        r'\bdel\s*(\d{1,4} to \d{1,4}\s*)\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
-        r'\bd(\d{1,4}-\d{1,4})\/([A-Z]\d{1,4}[A-Z])\b',  # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
+            r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
+            r'\b[A-Z]\d{1,4}/[A-Z]del\b',  # Mutazione doppia, e.g., L747S/T751del
+            r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?){1,2}\b',  # Mutazione tripla, e.g., L747S-T751del/M752del
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del \b',  # Mutazione d'intervallo, e.g., L747-T751del
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del(?:,[A-Z]Sins)?\b',  # Mutazione d'intervallo con inserzione, e.g., L747-T751del,Sins
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins\b',  # Mutazione di inserzione, e.g., D770-N771ins
+            r'\bDel\s*\d{1,4}\b',  # Delezione, e.g., Del19
+            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\s*ins\b',  # Inserzione tra due amminoacidi, e.g., A763_Y764ins
+            r'\bDel [A-Z]\d{1,4}/[A-Z]\d{1,4}\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., Del E746/A750
+            r'\bex\d{1,2}del\b',  # Delezione con notazione esone, e.g., ex19del
+            r'\bdel\s*(\d{1,4} to \d{1,4}\s*)\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
+            r'\bd(\d{1,4}-\d{1,4})\/([A-Z]\d{1,4}[A-Z])\b',  # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
         ]
         combined_pattern = re.compile('|'.join(patterns))
 

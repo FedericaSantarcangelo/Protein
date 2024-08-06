@@ -26,7 +26,10 @@ class Cleaner():
         """
         data = self.remove_row(data)
         data = self.filter_data(data)
-        data = self.remove_salts(data)
+        first , second = self.select_type(data)
+        second = second[~second['Molecule ChEMBL ID'].isin(first['Molecule ChEMBL ID'])]
+        save_other_files(second, self.args.path_output, 'second_quality_data_tosplit')
+        data = self.remove_salts(first)
         if self.args.mutation:
             mutation_processor = Mutation(self.args)
             data = mutation_processor.get_mutations(data.copy())
@@ -60,19 +63,6 @@ class Cleaner():
 
         """ Remove the rows with no interesting values """
         # Filter based on the parser arguments
-        other = data.copy()
-        if self.args.assay_type != 'None':
-            data = data.loc[data['Assay Type'] == self.args.assay_type]
-        if self.args.assay_organism != 'None':
-            data = data.loc[data['Assay Organism'] == self.args.assay_organism]
-        if self.args.BAO_Label != 'None':  
-            data = data.loc[data['BAO Label'] == self.args.BAO_Label]
-        if self.args.target_type != 'None':
-            data = data.loc[data['Target Type'] == self.args.target_type]
-
-        other = other.loc[~other.index.isin(data.index)] # semi_sintetic_data
-        other = self.remove_duplicate(other)
-        save_other_files(other, self.args.path_output, 'semi_sintetic_data')
         return data
 
     def filter_data(self, data: pd.DataFrame):
@@ -100,7 +90,10 @@ class Cleaner():
             data_perc = data_perc[data_perc['Assay Description'].str.contains(pattern, regex=True, na=False)]
             data_perc = self.data_perc(data_perc)
         
-        return pd.concat([data_log, data_act, data_perc])
+        df= pd.concat([data_log, data_act, data_perc])
+        save_other_files(df, self.args.path_output, 'standard_type_data')
+        
+        return df
     
     def data_perc(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Filter the data perc if are less or greater than the threshold
@@ -163,6 +156,21 @@ class Cleaner():
 
         return data
     
+    def select_type(self, data: pd.DataFrame) -> pd.DataFrame:
+        other = data.copy()
+        if self.args.assay_type != 'None':
+            data = data.loc[data['Assay Type'] == self.args.assay_type]
+        if self.args.assay_organism != 'None':
+            data = data.loc[data['Assay Organism'] == self.args.assay_organism]
+        if self.args.BAO_Label != 'None':  
+            data = data.loc[data['BAO Label'] == self.args.BAO_Label]
+        if self.args.target_type != 'None':
+            data = data.loc[data['Target Type'] == self.args.target_type]
+
+        other = other.loc[~other.index.isin(data.index)] # semi_sintetic_data
+        #other = self.remove_duplicate(other)
+        return data,other
+    
     def remove_salts(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Remove the salts from the SMILES
             :param smiles: the SMILES
@@ -200,7 +208,7 @@ class Cleaner():
 
         indexes = [] #lista indici da tenere
 
-        for mol,grouper in g_dupl:
+        for _,grouper in g_dupl:
             std_type_count = grouper['Standard Type'].value_counts()
             dominant = std_type_count.idxmax()
 
@@ -231,7 +239,6 @@ class Cleaner():
         filter_data = duplicate_data.loc[indexes]
 
         return pd.concat([unique_data,filter_data])
-
 
     def active_inactive(self, data: pd.DataFrame):
         """ Filter the data based on active and inactive values
@@ -304,8 +311,6 @@ class Cleaner():
         df_whole = pd.concat([df_act_rev_act, df_act_rev_inact, df_act_rev_inc, df_perc_rev_act, df_perc_rev_inact])
         df_whole_inact = pd.concat([df_act_rev_inact, df_perc_rev_inact])
         df_whole_act = pd.concat([df_act_rev_act, df_perc_rev_act])
-
-
 
         data_report = pd.DataFrame(columns=[
                                     'ratio active/inactive',

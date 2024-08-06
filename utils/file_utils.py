@@ -68,6 +68,8 @@ def save_other_files(file: pd.DataFrame, output_path: str, name: str):
     except Exception as e:
         print(f"Error during the saving of the file {full_path}: {e}")
 
+
+
 def save_data_report(base_path: str, data_dict: dict):
     """
     Save the data in the report folder or in the filtered folder if the file is not a report
