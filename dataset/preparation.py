@@ -1,9 +1,8 @@
 import pandas as pd
-import os
 import numpy as np
 from argparse import Namespace, ArgumentParser
 from utils.args import data_cleaning_args
-from utils.file_utils import save_data_report, save_other_files
+from utils.file_utils import *
 import re
 from dataset.mutations import Mutation
 import ast
@@ -27,14 +26,15 @@ class Cleaner():
         data = self.remove_row(data)
         data = self.filter_data(data)
         first , second = self.select_type(data)
-        second = second[~second['Molecule ChEMBL ID'].isin(first['Molecule ChEMBL ID'])]
-        save_other_files(second, self.args.path_output, 'second_quality_data_tosplit')
         data = self.remove_salts(first)
+        second,third = split_second(second) #function to split the second quality data in 3° quality data
         if self.args.mutation:
             mutation_processor = Mutation(self.args)
-            data = mutation_processor.get_mutations(data.copy())
-        data = self.remove_duplicate(data)
-        data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(data)
+            mut,wild_type,mixed = mutation_processor.get_mutations(data.copy())    
+            mut_2, wild_type_2, mixed_2 = mutation_processor.get_mutations(second.copy(),'2')
+            mut_3, wild_type_3, mixed_3 = mutation_processor.get_mutations(third.copy(),'3')
+        mut = pd.concat([mut,wild_type])
+        data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(mut)
         
         filenames = {
             'whole_dataset_out.csv': whole_dataset,
@@ -44,7 +44,6 @@ class Cleaner():
             'data_report_out.csv': data_report,
         }
         save_data_report(self.args.path_output,filenames)
-        
         return data
 
     def remove_row(self,data: pd.DataFrame):
@@ -52,17 +51,12 @@ class Cleaner():
             :param data: the data
             :return: the data without missing values
         """
-        # Remove the rows with missing values
         data = data.dropna(subset=['Smiles',
                             'Standard Type',
                             'Standard Relation',
                             'Standard Value',
                             'Standard Units'])
-        # Remove the rows with negative values
-        data = data.loc[data['Standard Value'] > 0]
-
-        """ Remove the rows with no interesting values """
-        # Filter based on the parser arguments
+        data = data.loc[data['Standard Value'] > 0] # Remove the rows with negative values
         return data
 
     def filter_data(self, data: pd.DataFrame):
@@ -86,13 +80,10 @@ class Cleaner():
             data_perc = data[data['Standard Type'].isin(p_type)]
             pattern = '|'.join(map(re.escape, assay_desc))
         
-        # Filtra i dati in base all'espressione regolare
             data_perc = data_perc[data_perc['Assay Description'].str.contains(pattern, regex=True, na=False)]
             data_perc = self.data_perc(data_perc)
         
         df= pd.concat([data_log, data_act, data_perc])
-        save_other_files(df, self.args.path_output, 'standard_type_data')
-        
         return df
     
     def data_perc(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -107,8 +98,6 @@ class Cleaner():
                 return True
             else:
                 return False
-
-    # Applica la funzione a ogni riga e filtra il DataFrame
         filtered_data = data[data.apply(filter_conditions, axis=1)]
         return filtered_data
            
@@ -118,20 +107,16 @@ class Cleaner():
             :param data: the data
             :return: the logarithmic data
         """
-        # Logarithmic transformation based on 'Standard Units'
         if (data['Standard Units'] == 'mM').any():
             data.loc[data['Standard Units'] == 'mM', 'Standard Value'] = [
                 round(np.log(np.exp(float(jj)) * 1000000), 3) for jj in data.loc[data['Standard Units'] == 'mM', 'Standard Value'].values.tolist()
             ]
             data.loc[data['Standard Units'] == 'mM', 'Standard Units'] = 'nM'
-
         elif (data['Standard Units'].isin(['uM', 'µM'])).any():
             data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Value'] = [
                 round(np.log(np.exp(float(jj)) * 1000), 3) for jj in data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Value'].values.tolist()
             ]
             data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Units'] = 'nM'
-
-        # Convert standard types for logarithmic values
         for log_type in self.args.standard_type_log:
             standard_type = log_type.replace('p', '')
             data.loc[data['Standard Type'] == log_type, 'Standard Type'] = standard_type
@@ -143,13 +128,10 @@ class Cleaner():
             :param data: the data
             :return: the activated data
         """
-        # Copy the DataFrame to avoid modifying the original data
         data = data.copy()
-
         if (data['Standard Units'] == 'mM').any():
             data.loc[data['Standard Units'] == 'mM', 'Standard Value'] *= 1000000
             data.loc[data['Standard Units'] == 'mM', 'Standard Units'] = 'nM'
-
         elif (data['Standard Units'].isin(['uM', 'µM'])).any():
             data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Value'] *= 1000
             data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Units'] = 'nM'
@@ -157,6 +139,10 @@ class Cleaner():
         return data
     
     def select_type(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+            In data there are only the records of interest: they represent the first quality data. 
+            In other there are the records that are not of interest: they represent the second quality data.
+        """ 
         other = data.copy()
         if self.args.assay_type != 'None':
             data = data.loc[data['Assay Type'] == self.args.assay_type]
@@ -167,8 +153,8 @@ class Cleaner():
         if self.args.target_type != 'None':
             data = data.loc[data['Target Type'] == self.args.target_type]
 
-        other = other.loc[~other.index.isin(data.index)] # semi_sintetic_data
-        #other = self.remove_duplicate(other)
+        other = other.loc[~other.index.isin(data.index)] # second level data 
+        other = other[~other['Molecule ChEMBL ID'].isin(data['Molecule ChEMBL ID'])] #remove the ID already present in the first dataset
         return data,other
     
     def remove_salts(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -191,7 +177,6 @@ class Cleaner():
             :param data: the data
             :return: the filtered data
         """
-
         rel_pri = ast.literal_eval(self.args.rel_pri)
         for key in list(rel_pri.keys()):
             new_key = f"'{key}'"

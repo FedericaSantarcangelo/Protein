@@ -13,24 +13,21 @@ class Mutation():
         self.shift=[-2,-1,1,2]
 
         
-    def get_mutations(self, data: pd.DataFrame):
+    def get_mutations(self, data: pd.DataFrame, flag='1'):
         """
         Get mutations main function
         :param uniprot: uniprot dataframe with mutations known
         :param data: data dataframe with mutations to be found
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
+
         uniprot, mapping, organism = load_file(self.args.path_uniprot), load_file(self.args.path_mapping), load_file(self.args.path_organism)
         merged_uniprot = marge_data(organism, mapping, uniprot)
-        if not os.path.exists(self.args.path_output+'merged_uniprot'):
-            save_other_files(merged_uniprot, self.args.path_output, 'merged_uniprot_mapping') # Save the merged file just to check it
         knonw_mutations,all_mut = self.format_uniprot(merged_uniprot)
         no_mut,mut=self.split_data(data.copy())
         mutant = self.find_mutant(mut,all_mut)
-        final, mutation_report, no_mut = self.format_output(no_mut,mutant,knonw_mutations)
-        save_other_files(no_mut, self.args.path_output, 'mixed')
-        save_mutation_target(self.args, mutation_report)
-        return final
+        mut, wild_type, mixed = self.format_output(no_mut,mutant,knonw_mutations, flag)
+        return mut, wild_type, mixed
     
     def split_data(self, data: pd.DataFrame):
         """
@@ -43,10 +40,8 @@ class Mutation():
         for column in required_columns:
             if column not in data.columns:
                 data[column] = ''
-
         data['mutation'] = data['Assay Description'].apply(
             lambda x: bool(self.pattern.search(x)))
-
         mut = data[data['mutation'] == True].copy()
         no_mut = data[data['mutation'] == False].copy()
         return no_mut, mut
@@ -58,13 +53,11 @@ class Mutation():
         :return: dictionary with keys (Accession Code, CheMBL ID):[mutations]
         """ 
         uniprot = uniprot.dropna(subset=['Known mutations'])
-
         uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.replace(r';+', ';', regex=True)  # remove multiple ;
         uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.replace(r'^\s*;\s*|\s*;\s*$', '', regex=True) #remove ; 
         uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.replace(r'\s*;\s*', ';', regex=True) #remove spaces before and after ;
         uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.replace(r'"', '', regex=True) # Rimuovi virgolette
         uniprot.loc[:,'Known mutations'] = uniprot['Known mutations'].str.split(';') #split the mutations
-        
         mutation_dict = {}
         for _, row in uniprot.iterrows():
             key = (row['Accession Code'], row['ChEMBL DB'])
@@ -72,27 +65,21 @@ class Mutation():
             if key not in mutation_dict:
                 mutation_dict[key] = []
             mutation_dict[key].extend(mutations)
-
         all_mutations = set()
         for mutations in mutation_dict.values():
             for mutation in mutations:
                 all_mutations.add(mutation)
-
         return mutation_dict,all_mutations
     
-        
     def shift_mutation(self, mutation: str, shift: list):
         """
         Shift mutation
         :param mutation: mutation
         :param shift: shift
         :return: shifted mutation
-        """
-        if 'del' in mutation or 'ins' in mutation or 'Del' in mutation or 'd' in mutation or 'Sins' in mutation:
-            return mutation
-        
-        shifted_mutation = []
+        """        
         if re.match(r'\b[A-Z]\d{1,4}[A-Z]\b', mutation):
+            shifted_mutation = []
             let_s,num,let_e = mutation[0],mutation[1:-1],mutation[-1]
             for s in shift:
                 shifted_num = int(num) + s
@@ -100,10 +87,9 @@ class Mutation():
                     shifted_num = str(shifted_num)
                     shifted_mutation.append(f"{let_s}{shifted_num}{let_e}")
             return ','.join(shifted_mutation)
-        
-    # Special case (e.g., Sins.)
+
         else:
-            raise ValueError(f"Mutation {mutation} is not in the correct format")
+            return mutation
         
     def find_and_shift(self, mutation, uniprot_set):
         """
@@ -126,20 +112,34 @@ class Mutation():
         """
         patterns = [
             r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
+            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi, e.g., A763_Y764
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi con trattino, e.g., D770-N771
+
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del/[A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del/L858R
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del, [A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del,L858R
+
+            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}insFHEA',  # Delezione tra due amminoacidi, e.g., A763_Y764insFHEA
+
             r'\b[A-Z]\d{1,4}/[A-Z]del\b',  # Mutazione doppia, e.g., L747S/T751del
-            r'\b[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?(?:/[A-Z]\d+[A-Z](-[A-Z]\d+[A-Z]del)?){1,2}\b',  # Mutazione tripla, e.g., L747S-T751del/M752del
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del \b',  # Mutazione d'intervallo, e.g., L747-T751del
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del(?:,[A-Z]Sins)?\b',  # Mutazione d'intervallo con inserzione, e.g., L747-T751del,Sins
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins\b',  # Mutazione di inserzione, e.g., D770-N771ins
-            r'\bDel\s*\d{1,4}\b',  # Delezione, e.g., Del19
-            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\s*ins\b',  # Inserzione tra due amminoacidi, e.g., A763_Y764ins
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Mutazione d'intervallo, e.g., L747-T751del
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del,Sins\b',  # Mutazione d'intervallo con inserzione, e.g., L747-T751del,Sins
             r'\bDel [A-Z]\d{1,4}/[A-Z]\d{1,4}\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., Del E746/A750
+            r'\bdel \d{1,4}-\d{1,4}\b',  # Delezione con intervallo numerico, e.g., del 746-750
+            r'\bDel\s*\d{1,4}\b',  # Delezione, e.g., Del19
+            
             r'\bex\d{1,2}del\b',  # Delezione con notazione esone, e.g., ex19del
-            r'\bdel\s*(\d{1,4} to \d{1,4}\s*)\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
+            r'\bexon\d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon19 deletion
+            r'\bexon \d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon19 deletion
+            
+            r'\b del \(\d{1,4} to \d{1,4}\)\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
+            r'\b \d{1,4} to \d{1,4}\s* deletion\b',  # Delezione con intervallo numerico tra parentesi, e.g., 746 to 750 deletion
+
             r'\bd(\d{1,4}-\d{1,4})\/([A-Z]\d{1,4}[A-Z])\b',  # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
+
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins\b',  # Mutazione di inserzione, e.g., D770-N771ins
+            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\s*ins\b',  # Inserzione tra due amminoacidi, e.g., A763_Y764ins
         ]
         combined_pattern = re.compile('|'.join(patterns))
-
         mutant = mut.copy()
         for index, row in mutant.iterrows():
             assay_description = row['Assay Description']
@@ -154,8 +154,6 @@ class Mutation():
                     mutations_found.append(mutation)
                     shifted_mutations.append(shifted)
                     known_flags.append(str(is_known))
-
-            # Process found mutations
                 if mutations_found:
                     if len(mutations_found) > 3: 
                         grouped_mutations = ["/".join(mutations_found[i:i+2]) for i in range(0, len(mutations_found), 2)]
@@ -172,33 +170,31 @@ class Mutation():
 
         return mutant
     
-    def format_output(self,no_mut,mut,known_mutations):
+    def format_output(self,no_mut,mut,known_mutations,flag):
         """Formatting final output
         param no_mut: dataframe with no mutations
         param mut: dataframe with mutations
         param known_mutations: dictionary with known mutations
         """
-
         mut = mut.sort_values(by='mutant')
         wt = re.compile(r'\b(wild type|wild_type)\b')
-
         for index, row in mut.iterrows():
-            mutant_value = row['mutant']
             assay_description = row['Assay Description']
-        
-        # Set 'wild type' if 'mutation' is empty and 'Assay Description' contains 'wild type'
+
             if row['mutant'] == '' and wt.search(assay_description):
                 mut.loc[index, 'mutant'] = 'wild type'
-
-        # Check known mutations and assign accession code
             if not row.get('mutant_known', False):
                 continue
-        
-            for key, mutations_list in known_mutations.items():
+            for key,_ in known_mutations.items():
                 if row['Target ChEMBL ID'] == key[1]:
                     accession_code = key[0]
                     mut.loc[index, 'Accession Code'] = accession_code
                     break  # Stop searching once we find the Accession Code 
+        wild_type = mut[mut['mutant'] == 'wild type'].copy()
+        #mut = mut - wild_type
+        mut = mut[mut['mutant'] != 'wild type']
         no_mut.loc[:,'mutant'] = 'mixed'
-        final= pd.concat([no_mut,mut],ignore_index=True)
-        return final,mut, no_mut
+        save_other_files(no_mut, self.args.path_output, 'mixed', flag) #this is the file with mixed data with duplicates
+        mut = save_mutation_target(self.args, mut, flag) #save the file with mutations in the methods there is the remove duplicate function
+        wild_type = save_mutation_target(self.args, wild_type, flag, 'wild_type')
+        return mut,wild_type,no_mut

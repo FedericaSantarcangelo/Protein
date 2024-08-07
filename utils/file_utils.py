@@ -43,32 +43,27 @@ def process_directory(path: str, cleaner):
     :param cleaner: the cleaner instance
     return: the cleaned dataframe
     """
-    from dataset.preparation import Cleaner
-
     return
 
-def save_other_files(file: pd.DataFrame, output_path: str, name: str):
+def save_other_files(file: pd.DataFrame, output_path: str, name: str, flag: str = '1'):
     """
     Save the file different from mutation such mixed and semi_sintetic_data
     :param file: the file to be saved
     :param output_path: the output path
     :param name: the name of the file
     """
-
     full_path = os.path.join(output_path + 'other', name)
     if not os.path.exists(full_path):
         os.makedirs(full_path)
-    ext = '.csv'
     if os.path.exists(full_path):
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        full_path = f"{full_path}/{name}{timestamp}{ext}"
 
-    try:
-        file.to_csv(full_path, index=False, encoding='utf-8')
-    except Exception as e:
-        print(f"Error during the saving of the file {full_path}: {e}")
-
-
+        try:
+            group = file.groupby('Target ChEMBL ID')
+            for name, df in group:
+                full_path = os.path.join(full_path, f"{name}_{flag}.csv")
+                df.to_csv(full_path, index=False)
+        except Exception as e:
+            print(f"Error during the saving of the file {full_path}: {e}")
 
 def save_data_report(base_path: str, data_dict: dict):
     """
@@ -99,3 +94,14 @@ def save_data_report(base_path: str, data_dict: dict):
             df.to_csv(full_path, index=False, encoding='utf-8')
         except Exception as e:
             print(f"Errore durante il salvataggio del file {full_path}: {e}")
+
+def split_second(second: pd.DataFrame):
+    """
+    Split the second quality data in two different dataframes: one with assay type B and Bao label single protein or assay format
+    and the other with assay type B or F and Bao label cell based if there are duplicates preference is given to B
+    """
+    df1 = second[(second['Assay Type'] == 'B') &
+                 (second['BAO Label'].isin(['single protein format','assay format']))].copy()
+    df2 = second.drop(df1.index)
+    df2 = df2[(df2['Assay Type'] == 'B') | (df2['Assay Type'] == 'F') & (df2['BAO Label'] == 'cell based format')].copy()
+    return df1, df2
