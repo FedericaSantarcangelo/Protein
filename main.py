@@ -60,6 +60,12 @@ def process_data(cleaner, args):
         process_directory(args.path_db, cleaner)
     else:
         df = load_file(args.path_db)
+        df=df.drop(columns=['Molecule Name','Molecular Weight','#RO5 Violations','AlogP','pChEMBL Value',
+                            'Data Validity Comment','Comment','Uo Units','Ligand Efficiency BEI',
+                            'Ligand Efficiency LE','Ligand Efficiency LLE','Ligand Efficiency SEI',
+                            'Potential Duplicate','BAO Format ID','Assay Tissue ChEMBL ID','Assay Tissue Name',
+                            'Assay Subcellular Fraction','Assay Parameters','Assay Variant Accession','Source ID',
+                            'Document Journal','Document Year','Properties','Properties','Action Type','Standard Text Value'])
         df = cleaner.clean_data(df)
     return df
 

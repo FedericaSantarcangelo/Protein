@@ -35,6 +35,7 @@ def load_file(path : str, delimiter = None, header='infer'):
         print(f"Error during the loading of the file {path}: {e}")
         sys.exit(1)
 
+
 def process_directory(path: str, cleaner):
     """"
     Process the directory containing the files to be cleaned: for each file in the directory,
@@ -47,12 +48,12 @@ def process_directory(path: str, cleaner):
 
 def save_other_files(file: pd.DataFrame, output_path: str, name: str, flag: str = '1'):
     """
-    Save the file different from mutation such mixed and semi_sintetic_data
+    Save the file different from mutation such mixed 
     :param file: the file to be saved
     :param output_path: the output path
     :param name: the name of the file
     """
-    full_path = os.path.join(output_path + 'other', name)
+    full_path = os.path.join(output_path + name)
     if not os.path.exists(full_path):
         os.makedirs(full_path)
     if os.path.exists(full_path):

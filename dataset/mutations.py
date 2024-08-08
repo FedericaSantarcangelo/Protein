@@ -4,7 +4,9 @@ import sys
 import re
 import pandas as pd
 from utils.file_utils import load_file, save_other_files
-from utils.mutation import save_mutation_target, marge_data
+from utils.mutation import *
+
+aminoacid=['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
 
 class Mutation():
     def __init__(self, args: Namespace):
@@ -81,6 +83,8 @@ class Mutation():
         if re.match(r'\b[A-Z]\d{1,4}[A-Z]\b', mutation):
             shifted_mutation = []
             let_s,num,let_e = mutation[0],mutation[1:-1],mutation[-1]
+            if let_s not in aminoacid or let_e not in aminoacid:
+                return 'wrong'
             for s in shift:
                 shifted_num = int(num) + s
                 if shifted_num >= 0:
@@ -191,9 +195,11 @@ class Mutation():
                     mut.loc[index, 'Accession Code'] = accession_code
                     break  # Stop searching once we find the Accession Code 
         wild_type = mut[mut['mutant'] == 'wild type'].copy()
-        #mut = mut - wild_type
-        mut = mut[mut['mutant'] != 'wild type']
         no_mut.loc[:,'mutant'] = 'mixed'
+        mut = mut[mut['mutant'] != 'wild type']
+        wrong = find_mixed(mut, no_mut)
+        no_mut = pd.concat([no_mut, wrong], ignore_index=True)   
+        mut = population(mut); no_mut = population(no_mut); wild_type = population(wild_type)
         save_other_files(no_mut, self.args.path_output, 'mixed', flag) #this is the file with mixed data with duplicates
         mut = save_mutation_target(self.args, mut, flag) #save the file with mutations in the methods there is the remove duplicate function
         wild_type = save_mutation_target(self.args, wild_type, flag, 'wild_type')

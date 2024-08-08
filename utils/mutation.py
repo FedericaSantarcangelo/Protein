@@ -43,3 +43,29 @@ def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation
         print(f"Error I/O: {e}")
     
     return drop_dupicates
+
+def population(data:pd.DataFrame):
+    """
+    Count the number of the document ChEMBL ID and assign the population to the dataframe
+    :param data: the dataframe to be populated
+    :return: the populated dataframe
+    """
+    
+    data.sort_values(by='Document ChEMBL ID', inplace=True)
+    counts=data['Document ChEMBL ID'].value_counts()
+    data['Population'] = data['Document ChEMBL ID'].map(lambda x: 'Plus' if counts[x] >= 3 else 'Less')
+    return data
+def find_mixed(mut: pd.DataFrame, no_mut:pd.DataFrame):
+    """
+    Find wrong mutation in the dataframe mut and move them in the dataframe no_mut with mixed label
+    :param mut: the dataframe with the mutation
+    :param no_mut: the dataframe without the mutation
+    :return: no_mut with update
+    """
+
+    wrong_mut = mut[mut['shifted_mutation'].str.contains('wrong')]
+    mut = mut.drop(wrong_mut.index)
+    wrong_mut['mutation'] = 'False'; wrong_mut['mutant_known']=''
+    wrong_mut['mutant']='mixed';wrong_mut['shifted_mutation']=''
+    wrong_mut['Accession Code'] = '' 
+    return wrong_mut
