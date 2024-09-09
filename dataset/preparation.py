@@ -4,7 +4,7 @@ from argparse import Namespace, ArgumentParser
 from utils.args import data_cleaning_args
 from utils.file_utils import *
 import re
-from dataset.mutations import Mutation
+from dataset.mutant import Mutation
 import ast
 
 

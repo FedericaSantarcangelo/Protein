@@ -50,11 +50,11 @@ def population(data:pd.DataFrame):
     :param data: the dataframe to be populated
     :return: the populated dataframe
     """
-    
     data.sort_values(by='Document ChEMBL ID', inplace=True)
     counts=data['Document ChEMBL ID'].value_counts()
     data['Population'] = data['Document ChEMBL ID'].map(lambda x: 'Plus' if counts[x] >= 3 else 'Less')
     return data
+
 def find_mixed(mut: pd.DataFrame, no_mut:pd.DataFrame):
     """
     Find wrong mutation in the dataframe mut and move them in the dataframe no_mut with mixed label
