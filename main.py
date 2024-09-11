@@ -13,7 +13,7 @@ from dataset.preparation import Cleaner
 
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.args import data_cleaning_args, model_args
-from utils.file_utils import load_file, process_directory
+from utils.file_utils import load_file, process_directory, drop_columns
 from models.classifiers import train_classifier
 from models.regressors import train_regressor
 
@@ -27,7 +27,7 @@ def parser_args():
     """
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     data_cleaning_args(parser)
-    parser.add_argument('--path_db', type = str, default = '/home/luca/LAB/LAB_federica/chembl1865/EGFR.csv',
+    parser.add_argument('--path_db', type = str, default = '/home/federica/LAB2/chembl33_20240216',
                         help = 'Specify the path of the database')
     parser.add_argument('--model', type=str, choices=['classifier', 'regressor'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
@@ -57,15 +57,10 @@ def process_data(cleaner, args):
     :return: the processed dataframe
     """
     if os.path.isdir(args.path_db):
-        process_directory(args.path_db, cleaner)
+        df = process_directory(args.path_db, cleaner)
     else:
         df = load_file(args.path_db)
-        df=df.drop(columns=['Molecule Name','Molecular Weight','#RO5 Violations','AlogP','pChEMBL Value',
-                            'Data Validity Comment','Comment','Uo Units','Ligand Efficiency BEI',
-                            'Ligand Efficiency LE','Ligand Efficiency LLE','Ligand Efficiency SEI',
-                            'Potential Duplicate','BAO Format ID','Assay Tissue ChEMBL ID','Assay Tissue Name',
-                            'Assay Subcellular Fraction','Assay Parameters','Assay Variant Accession','Source ID',
-                            'Document Journal','Document Year','Properties','Properties','Action Type','Standard Text Value'])
+        df = drop_columns(df)
         df = cleaner.clean_data(df)
     return df
 

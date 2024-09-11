@@ -25,15 +25,15 @@ class Cleaner():
         """
         data = self.remove_row(data)
         data = self.filter_data(data)
-        first , second = self.select_type(data)
-        data = self.remove_salts(first)
+        data = self.remove_salts(data)
+        first , second = self.selct_quality(data)
         second,third = split_second(second) #function to split the second quality data in 3° quality data
         if self.args.mutation:
             mutation_processor = Mutation(self.args)
-            mut,wild_type,mixed = mutation_processor.get_mutations(data.copy())    
+            mut,wild_type,mixed = mutation_processor.get_mutations(first.copy())    
             mut_2, wild_type_2, mixed_2 = mutation_processor.get_mutations(second.copy(),'2')
             mut_3, wild_type_3, mixed_3 = mutation_processor.get_mutations(third.copy(),'3')
-        mut = pd.concat([mut,wild_type])
+            mut = pd.concat([mut,wild_type])
         data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(mut)
         
         filenames = {
@@ -138,10 +138,10 @@ class Cleaner():
 
         return data
     
-    def select_type(self, data: pd.DataFrame) -> pd.DataFrame:
+    def selct_quality(self, data: pd.DataFrame) -> pd.DataFrame:
         """
             In data there are only the records of interest: they represent the first quality data. 
-            In other there are the records that are not of interest: they represent the second quality data.
+            In other there are records that are not of interest: they represent the second quality data.
         """ 
         other = data.copy()
         if self.args.assay_type != 'None':

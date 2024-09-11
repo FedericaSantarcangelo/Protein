@@ -24,19 +24,32 @@ def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation
     try:
         if id_column not in data.columns:
             raise ValueError(f"{id_column} not in the columns of the dataframe")
+        
         full_path = os.path.join(args.path_output, f_path)
         if not os.path.exists(full_path):
             os.makedirs(full_path, exist_ok=True)
+
         cleaner = Cleaner(args)
+
         if flag != '1':
             drop_dupicates = data.drop_duplicates()
         else:
             drop_dupicates = cleaner.remove_duplicate(data)
 
         grouped = drop_dupicates.groupby(id_column)
+
         for name, group in grouped:
             output_path = os.path.join(full_path, f"{name}_{flag}.csv")
-            group.to_csv(output_path, index=False)
+            if os.path.exists(output_path):
+                try:
+                    existing_data = pd.read_csv(output_path)
+                    group = pd.concat([existing_data, group], ignore_index=True).drop_duplicates()
+                except Exception as e:
+                    print(f"Error during the reading of the file {output_path}: {e}")
+            try:
+                group.to_csv(output_path, index=False) #save or upodate the file
+            except Exception as e:
+                print(f"Error during the saving of the file {output_path}: {e}")
     except ValueError as e:
         print(f"Error: {e}")
     except IOError as e:
@@ -52,7 +65,7 @@ def population(data:pd.DataFrame):
     """
     data.sort_values(by='Document ChEMBL ID', inplace=True)
     counts=data['Document ChEMBL ID'].value_counts()
-    data['Population'] = data['Document ChEMBL ID'].map(lambda x: 'Plus' if counts[x] >= 3 else 'Less')
+    data.loc[:, 'Population'] = data['Document ChEMBL ID'].map(lambda x: 'Plus' if counts[x] >= 3 else 'Less')
     return data
 
 def find_mixed(mut: pd.DataFrame, no_mut:pd.DataFrame):
@@ -63,9 +76,11 @@ def find_mixed(mut: pd.DataFrame, no_mut:pd.DataFrame):
     :return: no_mut with update
     """
 
-    wrong_mut = mut[mut['shifted_mutation'].str.contains('wrong')]
+    wrong_mut = mut.loc[mut['shifted_mutation'].str.contains('wrong')]
     mut = mut.drop(wrong_mut.index)
-    wrong_mut['mutation'] = 'False'; wrong_mut['mutant_known']=''
-    wrong_mut['mutant']='mixed';wrong_mut['shifted_mutation']=''
-    wrong_mut['Accession Code'] = '' 
+    wrong_mut.loc[:, 'mutation'] = False
+    wrong_mut.loc[:, 'mutant_known'] = ''
+    wrong_mut.loc[:, 'mutant'] = 'mixed'
+    wrong_mut.loc[:, 'shifted_mutation'] = ''
+    wrong_mut.loc[:, 'Accession Code'] = ''
     return wrong_mut
