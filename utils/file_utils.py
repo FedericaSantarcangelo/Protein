@@ -158,5 +158,5 @@ def split_second(second: pd.DataFrame):
     df1 = second[(second['Assay Type'] == 'B') &
                  (second['BAO Label'].isin(['single protein format','assay format']))].copy()
     df2 = second.drop(df1.index)
-    df2 = df2[(df2['Assay Type'] == 'B') | (df2['Assay Type'] == 'F') & (df2['BAO Label'] == 'cell based format')].copy()
+    df2 = df2[(df2['Assay Type'] == 'B') | (df2['Assay Type'] == 'F') & (df2['BAO Label'] == 'cell-based format')].copy()
     return df1, df2

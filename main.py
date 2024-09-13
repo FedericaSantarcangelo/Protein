@@ -12,7 +12,7 @@ import numpy as np
 from dataset.preparation import Cleaner
 
 from dataset.processing import process_molecules_and_calculate_descriptors
-from utils.args import data_cleaning_args, model_args
+from utils.args import data_cleaning_args, file_args ,model_args
 from utils.file_utils import load_file, process_directory, drop_columns
 from models.classifiers import train_classifier
 from models.regressors import train_regressor
@@ -26,6 +26,7 @@ def parser_args():
     :return: the arguments
     """
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
+    file_args(parser)
     data_cleaning_args(parser)
     parser.add_argument('--path_db', type = str, default = '/home/federica/LAB2/chembl33_20240216',
                         help = 'Specify the path of the database')
@@ -68,7 +69,7 @@ def main():
     args = parser_args()
 
     cleaner = Cleaner(args)
-    
+    #aggiungere caricamento del file per assays
     cleaned_data = process_data(cleaner, args)
     
     df=process_molecules_and_calculate_descriptors(cleaned_data)

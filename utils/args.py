@@ -29,7 +29,8 @@ def data_cleaning_args(parser : ArgumentParser) -> None:
     parser.add_argument('--src_pri', type=str, default="{'Scientific Literature':1, 'BindingDB Database':2, 'Fraunhofer HDAC6':3, 'PubChem':4}",
                         help="source priority")
     
-    # Add arguments for the path of the files
+def file_args(parser: ArgumentParser) -> None:
+    """ Add arguments for file paths"""
     parser.add_argument('--path_uniprot', type = str, default = '/home/federica/LAB/df_uniprot_details.tsv', 
                         help = 'Specify the path of uniprot detailes file')
     parser.add_argument('--path_mapping', type = str, default= '/home/federica/LAB2/chembl_uniprot_mapping.txt', 
@@ -38,6 +39,7 @@ def data_cleaning_args(parser : ArgumentParser) -> None:
                         help = 'Specify the path of the uniptot and model organism file')
     parser.add_argument('--path_output', type = str, default = '/home/luca/LAB/LAB_federica/', 
                         help = 'Specify the path where to save the output file')
+    parser.add_argument('--path_assay',type=str, default='/home/federica/LAB2/assays.csv', help='Specify the name of the assay file with confidence informations')
     
     # Add arguments for mutational analysis
     parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')

@@ -26,6 +26,8 @@ class Cleaner():
         data = self.remove_row(data)
         data = self.filter_data(data)
         data = self.remove_salts(data)
+        assay = load_file(self.args.path_assay)
+        data = self.compentence(data,assay)
         first , second = self.selct_quality(data)
         second,third = split_second(second) #function to split the second quality data in 3° quality data
         if self.args.mutation:
@@ -136,6 +138,18 @@ class Cleaner():
             data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Value'] *= 1000
             data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Units'] = 'nM'
 
+        return data
+    
+    def compentence(self, data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
+        """"Filter data based on the confidence score in the assays file
+            :param data: the data
+            :param assay: the assay file
+            :return: the filtered data
+        """
+        data = data.copy()
+        assay_ids = assay[assay['Confidence Score'] >= 8]['ChEMBL ID'].tolist()
+        data = data[data['Assay ChEMBL ID'].isin(assay_ids)]
+        data = data[data['Assay Type'].isin(['F', 'B'])]
         return data
     
     def selct_quality(self, data: pd.DataFrame) -> pd.DataFrame:

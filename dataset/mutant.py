@@ -22,7 +22,6 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
-
         uniprot, mapping, organism = load_file(self.args.path_uniprot), load_file(self.args.path_mapping), load_file(self.args.path_organism)
         merged_uniprot = marge_data(organism, mapping, uniprot)
         knonw_mutations,all_mut = self.format_uniprot(merged_uniprot)
