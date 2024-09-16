@@ -13,7 +13,8 @@ class Mutation():
         self.args = args
         self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type|\b[A-Z]\d{1,4}-[A-Z]\d{1,4}') 
         self.shift=[-2,-1,1,2]
-
+        uniprot, mapping, organism = load_file(self.args.path_uniprot), load_file(self.args.path_mapping), load_file(self.args.path_organism)
+        self.merged_uniprot = marge_data(organism, mapping, uniprot)
         
     def get_mutations(self, data: pd.DataFrame, flag='1'):
         """
@@ -22,9 +23,7 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
-        uniprot, mapping, organism = load_file(self.args.path_uniprot), load_file(self.args.path_mapping), load_file(self.args.path_organism)
-        merged_uniprot = marge_data(organism, mapping, uniprot)
-        knonw_mutations,all_mut = self.format_uniprot(merged_uniprot)
+        knonw_mutations,all_mut = self.format_uniprot(self.merged_uniprot)
         no_mut,mut=self.split_data(data.copy())
         mutant = self.find_mutant(mut,all_mut)
         mut, wild_type, mixed = self.format_output(no_mut,mutant,knonw_mutations, flag)

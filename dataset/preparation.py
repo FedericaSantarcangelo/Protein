@@ -17,7 +17,7 @@ def get_parser() -> ArgumentParser:
 class Cleaner():
     def __init__(self,args: Namespace):
         self.args = args
-
+        self.assay = load_file(self.args.path_assay)
     def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Clean the data
             :param data: the data
@@ -26,10 +26,10 @@ class Cleaner():
         data = self.remove_row(data)
         data = self.filter_data(data)
         data = self.remove_salts(data)
-        assay = load_file(self.args.path_assay)
-        data = self.compentence(data,assay)
+        data = self.compentence(data,self.assay)
         first , second = self.selct_quality(data)
         second,third = split_second(second) #function to split the second quality data in 3° quality data
+        
         if self.args.mutation:
             mutation_processor = Mutation(self.args)
             mut,wild_type,mixed = mutation_processor.get_mutations(first.copy())    
