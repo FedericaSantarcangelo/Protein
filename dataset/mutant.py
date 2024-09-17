@@ -14,7 +14,8 @@ class Mutation():
         self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type|\b[A-Z]\d{1,4}-[A-Z]\d{1,4}') 
         self.shift=[-2,-1,1,2]
         uniprot, mapping, organism = load_file(self.args.path_uniprot), load_file(self.args.path_mapping), load_file(self.args.path_organism)
-        self.merged_uniprot = marge_data(organism, mapping, uniprot)
+        self.merged_uniprot = marge_data(self.args.path_output,organism, mapping, uniprot)
+
         
     def get_mutations(self, data: pd.DataFrame, flag='1'):
         """
@@ -81,7 +82,7 @@ class Mutation():
         if re.match(r'\b[A-Z]\d{1,4}[A-Z]\b', mutation):
             shifted_mutation = []
             let_s,num,let_e = mutation[0],mutation[1:-1],mutation[-1]
-            if let_s not in aminoacid or let_e not in aminoacid:
+            if let_s not in aminoacid or let_e not in aminoacid or let_e == let_s:
                 return 'wrong'
             for s in shift:
                 shifted_num = int(num) + s
@@ -116,6 +117,7 @@ class Mutation():
             r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
             r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi, e.g., A763_Y764
             r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi con trattino, e.g., D770-N771
+            r'\b[A-Z]\d{1,4}\b',  # Mutazione singola, e.g., L747
 
             r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del/[A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del/L858R
             r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del, [A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del,L858R
@@ -195,10 +197,10 @@ class Mutation():
         wild_type = mut[mut['mutant'] == 'wild type'].copy()
         no_mut.loc[:,'mutant'] = 'mixed'
         mut = mut[mut['mutant'] != 'wild type']
-        wrong = find_mixed(mut, no_mut)
+        wrong,mut = find_mixed(mut, no_mut)
         no_mut = pd.concat([no_mut, wrong], ignore_index=True)   
         mut = population(mut); no_mut = population(no_mut); wild_type = population(wild_type)
-        save_other_files(no_mut, self.args.path_output, 'mixed', flag) #this is the file with mixed data with duplicates
-        mut = save_mutation_target(self.args, mut, flag) #save the file with mutations in the methods there is the remove duplicate function
-        wild_type = save_mutation_target(self.args, wild_type, flag, 'wild_type')
+        save_other_files(no_mut, self.args.path_output ,'mixed', flag) 
+        mut = save_mutation_target(self.args, mut, flag) 
+        wild_type = save_mutation_target(self.args, wild_type ,flag, 'wild_type')
         return mut,wild_type,no_mut

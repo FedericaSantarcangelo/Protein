@@ -8,6 +8,7 @@ import sys
 import random
 import torch
 import numpy as np
+from datetime import datetime
 
 from dataset.preparation import Cleaner
 
@@ -57,6 +58,12 @@ def process_data(cleaner, args):
     :param args: the arguments
     :return: the processed dataframe
     """
+    timestamp = datetime.now().strftime('%Y%m%d%H%M')
+    name = 'data_'+timestamp+'/'
+    args.path_output = os.path.join(args.path_output, name)
+    if not os.path.exists(args.path_output):
+        os.makedirs(args.path_output)
+
     if os.path.isdir(args.path_db):
         df = process_directory(args.path_db, cleaner)
     else:
@@ -69,7 +76,6 @@ def main():
     args = parser_args()
 
     cleaner = Cleaner(args)
-    #aggiungere caricamento del file per assays
     cleaned_data = process_data(cleaner, args)
     
     df=process_molecules_and_calculate_descriptors(cleaned_data)

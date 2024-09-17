@@ -18,6 +18,8 @@ class Cleaner():
     def __init__(self,args: Namespace):
         self.args = args
         self.assay = load_file(self.args.path_assay)
+
+
     def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Clean the data
             :param data: the data
