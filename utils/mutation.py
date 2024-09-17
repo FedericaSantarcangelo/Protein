@@ -63,6 +63,10 @@ def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation
         if not os.path.exists(full_path):
             os.makedirs(full_path, exist_ok=True)
 
+        full_path = os.path.join(full_path +f'/{f_path}'+f'_{flag}')
+        if not os.path.exists(full_path):
+            os.makedirs(full_path, exist_ok=True)
+
         cleaner = Cleaner(args)
 
         if flag != '1':

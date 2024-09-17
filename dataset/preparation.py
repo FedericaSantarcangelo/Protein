@@ -37,18 +37,32 @@ class Cleaner():
             mut,wild_type,mixed = mutation_processor.get_mutations(first.copy())    
             mut_2, wild_type_2, mixed_2 = mutation_processor.get_mutations(second.copy(),'2')
             mut_3, wild_type_3, mixed_3 = mutation_processor.get_mutations(third.copy(),'3')
-            mut = pd.concat([mut,wild_type])
-        data_report, whole_dataset, whole_act, whole_inact, inc_data = self.active_inactive(mut)
+            mut_1 = pd.concat([mut,wild_type])
+            mut_1["Quality"] = 1
+            mut_2 = pd.concat([mut_2,wild_type_2])
+            mut_2["Quality"] = 2
+            mut_3 = pd.concat([mut_3,wild_type_3])
+            mut_3["Quality"] = 3
+
+        data_report_1, whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1 = self.active_inactive(mut_1)
+        data_report_2, whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2 = self.active_inactive(mut_2)
+        data_report_3, whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3 = self.active_inactive(mut_3)
         
-        filenames = {
-            'whole_dataset_out.csv': whole_dataset,
-            'whole_act_out.csv': whole_act,
-            'whole_inact_out.csv': whole_inact,
-            'inc_data_out.csv': inc_data,
-            'data_report_out.csv': data_report,
-        }
-        save_data_report(self.args.path_output,filenames)
-        return data
+        dict_file(whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1,data_report_1)
+        dict_file(whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2,data_report_2)
+        dict_file(whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3,data_report_3)
+
+        def dict_file(whole_dataset, whole_act, whole_inact, inc_data,data_report):
+            filenames = {
+                'whole_dataset_out.csv': whole_dataset,
+                'whole_act_out.csv': whole_act,
+                'whole_inact_out.csv': whole_inact,
+                'inc_data_out.csv': inc_data,
+                'data_report_out.csv': data_report,
+            }
+            save_data_report(self.args.path_output,filenames)
+        
+        return pd.concat(mut_1,mut_2,mut_3)
 
     def remove_row(self,data: pd.DataFrame):
         """ Remove the row with missing values
@@ -336,7 +350,6 @@ class Cleaner():
         total_std_types = len(df_whole_act)
         total_inhibition = len(df_perc_rev_inact)
 
-
         data_dict = {
             'ratio active/inactive':ratio_act_ina,
             'total_df_records':total_df_records,
@@ -355,7 +368,10 @@ class Cleaner():
             'data_inhi_ina_min':perc_rev_inact_min,
             'data_inhi_ina_max':perc_rev_inact_max,
     }
-        
+        for key,row in data_dict.items():
+            if pd.isna(row):
+                data_dict[key] = 0
+
         new_row=pd.DataFrame([data_dict])
         data_report = pd.concat([data_report, new_row], ignore_index=True)
 
