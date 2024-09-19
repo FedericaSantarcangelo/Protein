@@ -38,20 +38,16 @@ class Cleaner():
             mut_2, wild_type_2, mixed_2 = mutation_processor.get_mutations(second.copy(),'2')
             mut_3, wild_type_3, mixed_3 = mutation_processor.get_mutations(third.copy(),'3')
             mut_1 = pd.concat([mut,wild_type])
-            mut_1["Quality"] = 1
+            mut_1.loc[:,'Quality'] = 1
             mut_2 = pd.concat([mut_2,wild_type_2])
-            mut_2["Quality"] = 2
+            mut_2.loc[:,'Quality'] = 2
             mut_3 = pd.concat([mut_3,wild_type_3])
-            mut_3["Quality"] = 3
+            mut_3.loc[:,'Quality'] = 3
 
-        data_report_1, whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1 = self.active_inactive(mut_1)
-        data_report_2, whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2 = self.active_inactive(mut_2)
-        data_report_3, whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3 = self.active_inactive(mut_3)
+        data_report_1, whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1 = self.active_inactive(mut_1,1)
+        data_report_2, whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2 = self.active_inactive(mut_2,2)
+        data_report_3, whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3 = self.active_inactive(mut_3,3)
         
-        dict_file(whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1,data_report_1)
-        dict_file(whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2,data_report_2)
-        dict_file(whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3,data_report_3)
-
         def dict_file(whole_dataset, whole_act, whole_inact, inc_data,data_report):
             filenames = {
                 'whole_dataset_out.csv': whole_dataset,
@@ -61,8 +57,12 @@ class Cleaner():
                 'data_report_out.csv': data_report,
             }
             save_data_report(self.args.path_output,filenames)
+
+        dict_file(whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1,data_report_1)
+        dict_file(whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2,data_report_2)
+        dict_file(whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3,data_report_3)
         
-        return pd.concat(mut_1,mut_2,mut_3)
+        return pd.concat([mut_1,mut_2,mut_3])
 
     def remove_row(self,data: pd.DataFrame):
         """ Remove the row with missing values
@@ -255,7 +255,7 @@ class Cleaner():
 
         return pd.concat([unique_data,filter_data])
 
-    def active_inactive(self, data: pd.DataFrame):
+    def active_inactive(self, data: pd.DataFrame,flag):
         """ Filter the data based on active and inactive values
             :param data: the data
             :return: the filtered data
@@ -285,8 +285,8 @@ class Cleaner():
             df_perc_inact_i = df_perc_inact_i[df_perc_inact_i['Standard Value'] > self.args.thr_perc]
 
         # Concatenare i risultati
-        df_perc_act = pd.concat([df_perc_act, df_perc_act_i], ignore_index=True)
-        df_perc_inact = pd.concat([df_perc_inact, df_perc_inact_i], ignore_index=True)
+            df_perc_act = pd.concat([df_perc_act, df_perc_act_i], ignore_index=True)
+            df_perc_inact = pd.concat([df_perc_inact, df_perc_inact_i], ignore_index=True)
 
         df_perc_rev_inact = df_perc_inact.copy()
         df_perc_rev_inact['Class'] = 0
@@ -304,15 +304,15 @@ class Cleaner():
 
         df_act_act = df_act[df_act['Standard Value'] <= self.args.thr_act]
         df_act_rev_act = df_act_act.copy()
-        df_act_rev_act['Class'] = 1
+        df_act_rev_act.loc[:,'Class'] = 1
         
         df_act_inact = df_act[df_act['Standard Value'] >= self.args.thr_act*10]
         df_act_rev_inact = df_act_inact.copy()
-        df_act_rev_inact['Class'] = 0
+        df_act_rev_inact.loc[:,'Class'] = 0
 
         df_act_inc = df_act.loc[(df_act['Standard Value'] > self.args.thr_act) & (df_act['Standard Value'] < self.args.thr_act * 10)]
         df_act_rev_inc = df_act_inc.copy()
-        df_act_rev_inc['Class'] = 2
+        df_act_rev_inc.loc[:,'Class'] = 2
 
         act_rev_act_c = df_act_rev_act['Standard Value'].count()
         act_rev_inact_c = df_act_rev_inact['Standard Value'].count()
@@ -343,7 +343,8 @@ class Cleaner():
                                     'data_inhi_act_min',
                                     'data_inhi_act_max',
                                     'data_inhi_ina_min',
-                                    'data_inhi_ina_max'])
+                                    'data_inhi_ina_max',
+                                    'quality'])
         
         ratio_act_ina = len(df_act_rev_act) / len(df_whole_inact)
         total_df_records = len(df_whole)
@@ -367,6 +368,7 @@ class Cleaner():
             'data_inhi_act_max':perc_rev_act_max,
             'data_inhi_ina_min':perc_rev_inact_min,
             'data_inhi_ina_max':perc_rev_inact_max,
+            'quality': flag
     }
         for key,row in data_dict.items():
             if pd.isna(row):
@@ -374,6 +376,7 @@ class Cleaner():
 
         new_row=pd.DataFrame([data_dict])
         data_report = pd.concat([data_report, new_row], ignore_index=True)
+        #data_report.sort_values(by='quality', inplace=True)
 
         return data_report, df_whole, df_whole_act, df_whole_inact, df_act_rev_inc
     

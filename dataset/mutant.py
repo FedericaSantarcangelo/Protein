@@ -197,7 +197,7 @@ class Mutation():
         wild_type = mut[mut['mutant'] == 'wild type'].copy()
         no_mut.loc[:,'mutant'] = 'mixed'
         mut = mut[mut['mutant'] != 'wild type']
-        wrong,mut = find_mixed(mut, no_mut)
+        wrong,mut = find_mixed(mut)
         no_mut = pd.concat([no_mut, wrong], ignore_index=True)   
         mut = population(mut); no_mut = population(no_mut); wild_type = population(wild_type)
         save_other_files(no_mut, self.args.path_output ,'mixed', flag) 
