@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 import os
 
+
+#exclude some Mordered descriptors that causing problems  
 exclude_descriptors = ['BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
 descriptor_names = [desc[0] for desc in Descriptors._descList if desc[0] not in exclude_descriptors]
 calculator = MoleculeDescriptors.MolecularDescriptorCalculator(descriptor_names)
@@ -17,7 +19,12 @@ mordred_calculator = Calculator(descriptors, ignore_3D=False)
 # Initialize Descriptors3D
 descriptor_functions = {name: func for name, func in Descriptors3D.__dict__.items() if callable(func) and name[0] != '_'}
 
-def prepare_molecule(smiles): #singolo smiles e non multiplo 
+def prepare_molecule(smiles): 
+        """
+        Prepare a molecule for descriptor calculation
+        :param smiles: the SMILES representation of the molecule
+        return: the molecule
+        """
         mol = Chem.MolFromSmiles(smiles, sanitize=True)
         if mol is None:
             return None
@@ -31,7 +38,11 @@ def prepare_molecule(smiles): #singolo smiles e non multiplo
         
 
 def calculate_rdkit_descriptors(mol):
-    
+    """ 
+    Compute RDKit descriptors for a molecule
+    :param mol: the molecule
+    return: the list of RDKit descriptors
+    """
     try:
         confs = AllChem.EmbedMultipleConfs(mol, numConfs=1, numThreads=0)
         if len(confs)==0:
@@ -57,6 +68,11 @@ def calculate_rdkit_descriptors(mol):
     
 
 def calculate_rdkit_3d_descriptors(mol):
+    """ 
+    Compute 3D RDKit descriptors for a molecule
+    :param mol: the molecule
+    return: the list of 3D RDKit descriptors
+    """
     if mol and mol.GetNumConformers() > 0:
         descriptors = {}
         for name, func in descriptor_functions.items():
@@ -68,13 +84,23 @@ def calculate_rdkit_3d_descriptors(mol):
     return [np.nan] * len(descriptor_functions)
 
 def calculate_mordred_descriptors(mol):
+    """
+    Compute Mordred descriptors for a molecule
+    :param mol: the molecule
+    return: the list of Mordred descriptors
+    """
     if mol:
         mordred_desc = mordred_calculator(mol)
         return list(mordred_desc.fill_missing(np.nan).values())
     return [np.nan] * len(mordred_calculator.descriptors)
 
-def process_molecule_with_logging(mol_id, smiles):
- 
+def process_molecule(mol_id, smiles):
+    """ 
+    Main function to process a molecule and calculate its descriptors
+    :param mol_id: the molecule identifier
+    :param smiles: the SMILES representation of the molecule
+    return: the molecule identifier and its descriptors
+    """
     try:
         mol2 = prepare_molecule(smiles)
         if mol2 is None:
@@ -92,14 +118,17 @@ def process_molecule_with_logging(mol_id, smiles):
         return mol_id, [np.nan] * total_descriptor_count
 
 def process_molecules_and_calculate_descriptors(df):
+    """ 
+    Process each molecule in the dataframe and calculate its descriptors (both RDKit and Mordred)
+    :param df: the dataframe containing the molecules
+    return: the dataframe with the calculated descriptors
+    """
     smiles_dict = df.set_index('Molecule ChEMBL ID')['Smiles'].to_dict()
 
     results = []
     for mol_id, smiles in smiles_dict.items():
-        results.append(process_molecule_with_logging(mol_id, smiles))
+        results.append(process_molecule(mol_id, smiles))
 
-    
-    # Add prefixes to descriptor names
     rdkit_descriptor_cols = ['rdkit_' + name for name in descriptor_names]
     rdkit_3d_descriptor_cols = ['rdkit_3d_' + name for name in sorted(descriptor_functions)]
     mordred_descriptor_cols = ['mordred_' + str(d) for d in mordred_calculator.descriptors]
