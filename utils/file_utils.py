@@ -1,14 +1,12 @@
+"""script to manage the files and the data"""
 import os 
 import glob
 import pandas as pd
 import sys
 
-
 def detect_delimiter(path: str, num_lines = 5) -> str:
     """
     Detect the delimiter of the file by reading the first num_lines of the file
-    :param path: the path of the file
-    :param num_lines: the number of lines to read
     :return: the delimiter of the file
     """
     delimiters = [';', ',', '\t', '|']
@@ -17,14 +15,11 @@ def detect_delimiter(path: str, num_lines = 5) -> str:
     for delimiter in delimiters:
         if all([delimiter in line for line in lines]):
             return delimiter
-    return '\t' # Assuming \t as default delimiter if no delimiter is found
+    return '\t'
 
 def load_file(path : str, delimiter = None, header='infer'):
     """
     Main function to load the data of any kind like csv, tsv, excel
-    :param path: the path of the file 
-    :param delimiter: the delimiter of the file
-    :param header: the header of the file
     """
     try: 
         if delimiter is None:
@@ -39,8 +34,6 @@ def load_file(path : str, delimiter = None, header='infer'):
 def drop_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Drop the columns from the dataframe
-    :param df: the dataframe
-    :param columns: the columns to be dropped
     :return: the dataframe without the columns
     """
     return df.drop(columns=['Molecule Name','Molecular Weight','#RO5 Violations','AlogP','pChEMBL Value',
@@ -54,17 +47,13 @@ def process_directory(path: str, cleaner):
     """"
     Process the directory containing the files to be cleaned: for each file in the directory,
     apply the cleaning function 
-    :param path: the path of the directory
-    :param cleaner: the cleaner instance
     return: the cleaned dataframe
     """
     if not path.endswith('/'):
         path = path + '/'
-    
-    files = sorted(glob.glob(os.path.join(path, '*.csv')))  # Get all the csv files in the directory
+    files = sorted(glob.glob(os.path.join(path, '*.csv')))
     header = None
-    cleaned_dfs = []  # List to store cleaned DataFrames
-
+    cleaned_dfs = []
 
     for file_path in files:
         if not os.path.isfile(file_path):
@@ -76,15 +65,33 @@ def process_directory(path: str, cleaner):
         else:
             if header is None:
                 raise ValueError("Header file not found. Ensure that the first file contains the header.")
-            
             df = load_file(file_path,header=None)
             df.columns = header
-
         df = drop_columns(df)
         cleaned_dfs.append(cleaner.clean_data(df))
     cleaned_df = pd.concat(cleaned_dfs, ignore_index=True)    
-
     return cleaned_df
+
+def selct_quality(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+            In data there are only the records of interest: they represent the first quality data. 
+            In other there are records that are not of interest: they represent the second quality data.
+            return: first, second and third quality data
+        """ 
+        other = data.copy()
+        if self.args.assay_type != 'None':
+            data = data.loc[data['Assay Type'] == self.args.assay_type]
+        if self.args.assay_organism != 'None':
+            data = data.loc[data['Assay Organism'] == self.args.assay_organism]
+        if self.args.BAO_Label != 'None':  
+            data = data.loc[data['BAO Label'] == self.args.BAO_Label]
+        if self.args.target_type != 'None':
+            data = data.loc[data['Target Type'] == self.args.target_type]
+
+        other = other.loc[~other.index.isin(data.index)]
+        other = other[~other['Molecule ChEMBL ID'].isin(data['Molecule ChEMBL ID'])] 
+        second,third = split_second(other)
+        return data,second,third
 
 def split_second(second: pd.DataFrame):
     """
@@ -100,9 +107,6 @@ def split_second(second: pd.DataFrame):
 def save_other_files(file: pd.DataFrame, output_path: str,name: str, flag: str = '1'):
     """
     Save the file different from mutation such mixed 
-    :param file: the file to be saved
-    :param output_path: the output path
-    :param name: the name of the file
     """
     full_path = os.path.join(output_path+name)
     if not os.path.exists(full_path):
@@ -133,10 +137,7 @@ def save_other_files(file: pd.DataFrame, output_path: str,name: str, flag: str =
 def save_data_report(base_path: str, data_dict: dict):
     """
     Save the data in the report folder or in the filtered folder if the file is not a report
-    :param base_path: the base path
-    :param data_dict: the data dictionary
     """
- 
     data_path = os.path.join(base_path, 'filtered')
     report_path = os.path.join(base_path, 'report')
     if not os.path.exists(data_path):
