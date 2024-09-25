@@ -4,7 +4,7 @@ from argparse import Namespace, ArgumentParser
 from utils.args import data_cleaning_args
 from utils.file_utils import *
 import re
-from dataset.mutant import Mutation
+from dataset.mutants import Mutation
 import ast
 
 
@@ -19,20 +19,15 @@ class Cleaner():
         self.args = args
         self.assay = load_file(self.args.path_assay)
 
-
     def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        """ Clean the data
-            :param data: the data
+        """Main function to clean the data
             :return: the cleaned data
         """
         data = self.remove_row(data)
         data = self.filter_data(data)
-        data = self.remove_salts(data)
-        data = self.compentence(data,self.assay)
-        first , second = self.selct_quality(data)
-        second,third = split_second(second) #function to split the second quality data in 3° quality data
-        
-        if self.args.mutation:
+        data = self.remove_salts(data) 
+        first , second, third = selct_quality(data)   
+        if self.args.mutation: #togliere le ripetizioni di codice per le qualità
             mutation_processor = Mutation(self.args)
             mut,wild_type,mixed = mutation_processor.get_mutations(first.copy())    
             mut_2, wild_type_2, mixed_2 = mutation_processor.get_mutations(second.copy(),'2')
@@ -57,7 +52,7 @@ class Cleaner():
                 'data_report_out.csv': data_report,
             }
             save_data_report(self.args.path_output,filenames)
-
+#togliere le ripetizioni di codice per salvare i file
         dict_file(whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1,data_report_1)
         dict_file(whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2,data_report_2)
         dict_file(whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3,data_report_3)
@@ -65,8 +60,7 @@ class Cleaner():
         return pd.concat([mut_1,mut_2,mut_3])
 
     def remove_row(self,data: pd.DataFrame):
-        """ Remove the row with missing values
-            :param data: the data
+        """Remove the row with missing values
             :return: the data without missing values
         """
         data = data.dropna(subset=['Smiles',
@@ -77,9 +71,9 @@ class Cleaner():
         data = data.loc[data['Standard Value'] > 0] # Remove the rows with negative values
         return data
 
+#sistemare questi if
     def filter_data(self, data: pd.DataFrame):
         """ Filter the data based on the standard type
-            :param data: the data
             :return: the filtered data
         """
         if self.args.standard_type_log != 'None':
@@ -97,7 +91,6 @@ class Cleaner():
             assay_desc = self.args.assay_description_perc[0].split(',')
             data_perc = data[data['Standard Type'].isin(p_type)]
             pattern = '|'.join(map(re.escape, assay_desc))
-        
             data_perc = data_perc[data_perc['Assay Description'].str.contains(pattern, regex=True, na=False)]
             data_perc = self.data_perc(data_perc)
         
@@ -106,7 +99,6 @@ class Cleaner():
     
     def data_perc(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Filter the data perc if are less or greater than the threshold
-            :param data: the data
             :return: the filtered data
         """
         def filter_conditions(row):
@@ -122,7 +114,6 @@ class Cleaner():
 
     def data_log(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Log the data and convert standard types
-            :param data: the data
             :return: the logarithmic data
         """
         if (data['Standard Units'] == 'mM').any():
@@ -143,7 +134,6 @@ class Cleaner():
     
     def data_act(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Act on the data based on standard units
-            :param data: the data
             :return: the activated data
         """
         data = data.copy()
@@ -158,8 +148,6 @@ class Cleaner():
     
     def compentence(self, data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
         """"Filter data based on the confidence score in the assays file
-            :param data: the data
-            :param assay: the assay file
             :return: the filtered data
         """
         data = data.copy()
@@ -168,28 +156,8 @@ class Cleaner():
         data = data[data['Assay Type'].isin(['F', 'B'])]
         return data
     
-    def selct_quality(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-            In data there are only the records of interest: they represent the first quality data. 
-            In other there are records that are not of interest: they represent the second quality data.
-        """ 
-        other = data.copy()
-        if self.args.assay_type != 'None':
-            data = data.loc[data['Assay Type'] == self.args.assay_type]
-        if self.args.assay_organism != 'None':
-            data = data.loc[data['Assay Organism'] == self.args.assay_organism]
-        if self.args.BAO_Label != 'None':  
-            data = data.loc[data['BAO Label'] == self.args.BAO_Label]
-        if self.args.target_type != 'None':
-            data = data.loc[data['Target Type'] == self.args.target_type]
-
-        other = other.loc[~other.index.isin(data.index)] # second level data 
-        other = other[~other['Molecule ChEMBL ID'].isin(data['Molecule ChEMBL ID'])] #remove the ID already present in the first dataset
-        return data,other
-    
     def remove_salts(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Remove the salts from the SMILES
-            :param smiles: the SMILES
             :return: the SMILES without salts
         """
         cleaned_smiles = []
@@ -200,11 +168,11 @@ class Cleaner():
             cleaned_smiles.append(main_component)
     
         data['Smiles'] = cleaned_smiles
+        data = self.compentence(data,self.assay)
         return data
-    
+    ##########dividere la funzione per rendere il codice più leggibile
     def remove_duplicate(self, data: pd.DataFrame) -> pd.DataFrame: 
         """ Remove duplicate appling a priority to the data
-            :param data: the data
             :return: the filtered data
         """
         rel_pri = ast.literal_eval(self.args.rel_pri)
@@ -257,17 +225,17 @@ class Cleaner():
 
     def active_inactive(self, data: pd.DataFrame,flag):
         """ Filter the data based on active and inactive values
-            :param data: the data
             :return: the filtered data
         """
         # Filter the data based on the 'Standard Relation' column
-
+#modificare i nomi usati nella funzione per renderla più leggibile
         s_type = self.args.standard_type_act[0].split(',')
         df_act = data[data['Standard Type'].isin(s_type)]
 
         p_type = self.args.standard_type_perc[0].split(',')
         df_perc = data[data['Standard Type'].isin(p_type)]
         
+#modificare questa parte di codice per renderla più leggibile
         if 'Activity' not in df_perc['Standard Type'].unique():
         # Se 'Activity' non è presente, filtra i dati in base alla soglia
             df_perc_act = df_perc[df_perc['Standard Value'] > self.args.thr_perc]
@@ -284,7 +252,6 @@ class Cleaner():
             df_perc_inact_i = df_perc[df_perc['Standard Type'] == 'Activity']
             df_perc_inact_i = df_perc_inact_i[df_perc_inact_i['Standard Value'] > self.args.thr_perc]
 
-        # Concatenare i risultati
             df_perc_act = pd.concat([df_perc_act, df_perc_act_i], ignore_index=True)
             df_perc_inact = pd.concat([df_perc_inact, df_perc_inact_i], ignore_index=True)
 
@@ -327,6 +294,7 @@ class Cleaner():
         df_whole_inact = pd.concat([df_act_rev_inact, df_perc_rev_inact])
         df_whole_act = pd.concat([df_act_rev_act, df_perc_rev_act])
 
+#spostare questi dataframe e dizionario in un'altra funzione o file per rendere il codice più leggibile
         data_report = pd.DataFrame(columns=[
                                     'ratio active/inactive',
                                     'total_df_records',
@@ -376,8 +344,6 @@ class Cleaner():
 
         new_row=pd.DataFrame([data_dict])
         data_report = pd.concat([data_report, new_row], ignore_index=True)
-        #data_report.sort_values(by='quality', inplace=True)
-
         return data_report, df_whole, df_whole_act, df_whole_inact, df_act_rev_inc
     
  
