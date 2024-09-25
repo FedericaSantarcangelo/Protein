@@ -3,6 +3,7 @@ import numpy as np
 from argparse import Namespace, ArgumentParser
 from utils.args import data_cleaning_args
 from utils.file_utils import *
+from utils.data_handling import *
 import re
 from dataset.mutants import Mutation
 import ast
@@ -25,7 +26,7 @@ class Cleaner():
         """
         data = self.remove_row(data)
         data = self.filter_data(data)
-        data = self.remove_salts(data) 
+        data = remove_salts(data) 
         first , second, third = selct_quality(data)   
         if self.args.mutation: #togliere le ripetizioni di codice per le qualità
             mutation_processor = Mutation(self.args)
@@ -71,7 +72,6 @@ class Cleaner():
         data = data.loc[data['Standard Value'] > 0] # Remove the rows with negative values
         return data
 
-#sistemare questi if
     def filter_data(self, data: pd.DataFrame):
         """ Filter the data based on the standard type
             :return: the filtered data
@@ -79,12 +79,12 @@ class Cleaner():
         if self.args.standard_type_log != 'None':
             l_type = self.args.standard_type_log[0].split(',')
             data_log = data[data['Standard Type'].isin(l_type)]
-            data_log = self.data_log(data_log)
+            data_log = data_log_f(data_log)
 
         if self.args.standard_type_act != 'None':
             s_type = self.args.standard_type_act[0].split(',')
             data_act = data[data['Standard Type'].isin(s_type)]
-            data_act = self.data_act(data_act)
+            data_act = data_act_f(data_act)
 
         if self.args.standard_type_perc != 'None' and self.args.assay_description_perc != 'None':
             p_type = self.args.standard_type_perc[0].split(',')
@@ -92,85 +92,11 @@ class Cleaner():
             data_perc = data[data['Standard Type'].isin(p_type)]
             pattern = '|'.join(map(re.escape, assay_desc))
             data_perc = data_perc[data_perc['Assay Description'].str.contains(pattern, regex=True, na=False)]
-            data_perc = self.data_perc(data_perc)
+            data_perc = data_perc_f(data_perc)
         
         df= pd.concat([data_log, data_act, data_perc])
         return df
-    
-    def data_perc(self, data: pd.DataFrame) -> pd.DataFrame:
-        """ Filter the data perc if are less or greater than the threshold
-            :return: the filtered data
-        """
-        def filter_conditions(row):
-            if row['Standard Type'] == 'Inhibition' and row['Standard Value'] > self.args.thr_perc:
-                return True
-            elif row['Standard Type'] == 'Activity' and row['Standard Value'] < self.args.thr_perc:
-                return True
-            else:
-                return False
-        filtered_data = data[data.apply(filter_conditions, axis=1)]
-        return filtered_data
-           
 
-    def data_log(self, data: pd.DataFrame) -> pd.DataFrame:
-        """ Log the data and convert standard types
-            :return: the logarithmic data
-        """
-        if (data['Standard Units'] == 'mM').any():
-            data.loc[data['Standard Units'] == 'mM', 'Standard Value'] = [
-                round(np.log(np.exp(float(jj)) * 1000000), 3) for jj in data.loc[data['Standard Units'] == 'mM', 'Standard Value'].values.tolist()
-            ]
-            data.loc[data['Standard Units'] == 'mM', 'Standard Units'] = 'nM'
-        elif (data['Standard Units'].isin(['uM', 'µM'])).any():
-            data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Value'] = [
-                round(np.log(np.exp(float(jj)) * 1000), 3) for jj in data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Value'].values.tolist()
-            ]
-            data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Units'] = 'nM'
-        for log_type in self.args.standard_type_log:
-            standard_type = log_type.replace('p', '')
-            data.loc[data['Standard Type'] == log_type, 'Standard Type'] = standard_type
-
-        return data
-    
-    def data_act(self, data: pd.DataFrame) -> pd.DataFrame:
-        """ Act on the data based on standard units
-            :return: the activated data
-        """
-        data = data.copy()
-        if (data['Standard Units'] == 'mM').any():
-            data.loc[data['Standard Units'] == 'mM', 'Standard Value'] *= 1000000
-            data.loc[data['Standard Units'] == 'mM', 'Standard Units'] = 'nM'
-        elif (data['Standard Units'].isin(['uM', 'µM'])).any():
-            data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Value'] *= 1000
-            data.loc[data['Standard Units'].isin(['uM', 'µM']), 'Standard Units'] = 'nM'
-
-        return data
-    
-    def compentence(self, data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
-        """"Filter data based on the confidence score in the assays file
-            :return: the filtered data
-        """
-        data = data.copy()
-        assay_ids = assay[assay['Confidence Score'] >= 8]['ChEMBL ID'].tolist()
-        data = data[data['Assay ChEMBL ID'].isin(assay_ids)]
-        data = data[data['Assay Type'].isin(['F', 'B'])]
-        return data
-    
-    def remove_salts(self, data: pd.DataFrame) -> pd.DataFrame:
-        """ Remove the salts from the SMILES
-            :return: the SMILES without salts
-        """
-        cleaned_smiles = []
-
-        for smiles in data['Smiles']:
-            components = smiles.split('.')
-            main_component = max(components, key=len)
-            cleaned_smiles.append(main_component)
-    
-        data['Smiles'] = cleaned_smiles
-        data = self.compentence(data,self.assay)
-        return data
-    ##########dividere la funzione per rendere il codice più leggibile
     def remove_duplicate(self, data: pd.DataFrame) -> pd.DataFrame: 
         """ Remove duplicate appling a priority to the data
             :return: the filtered data

@@ -1,4 +1,4 @@
-"""script to manage the files and the data"""
+"""script to manage files and data"""
 import os 
 import glob
 import pandas as pd
@@ -92,6 +92,16 @@ def selct_quality(self, data: pd.DataFrame) -> pd.DataFrame:
         other = other[~other['Molecule ChEMBL ID'].isin(data['Molecule ChEMBL ID'])] 
         second,third = split_second(other)
         return data,second,third
+
+def compentence(self, data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
+    """Filter data based on the confidence score in the assays file
+            :return: the filtered data
+    """
+    data = data.copy()
+    assay_ids = assay[assay['Confidence Score'] >= 8]['ChEMBL ID'].tolist()
+    data = data[data['Assay ChEMBL ID'].isin(assay_ids)]
+    data = data[data['Assay Type'].isin(['F', 'B'])]
+    return data
 
 def split_second(second: pd.DataFrame):
     """
