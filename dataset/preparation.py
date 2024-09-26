@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from argparse import Namespace, ArgumentParser
 from utils.args import data_cleaning_args
 from utils.file_utils import *
@@ -7,7 +6,6 @@ from utils.data_handling import *
 import re
 from dataset.mutants import Mutation
 import ast
-
 
 def get_parser() -> ArgumentParser:
     """ Get the parser """
@@ -27,38 +25,29 @@ class Cleaner():
         data = self.remove_row(data)
         data = self.filter_data(data)
         data = remove_salts(data) 
-        first , second, third = selct_quality(data)   
-        if self.args.mutation: #togliere le ripetizioni di codice per le qualità
+        first , second, third = selct_quality(data)
+        quality_data = [(first,2),(second,2),(third,3)] #quality level
+        all_mutations=[]
+        report = []   
+        if self.args.mutation:
             mutation_processor = Mutation(self.args)
-            mut,wild_type,mixed = mutation_processor.get_mutations(first.copy())    
-            mut_2, wild_type_2, mixed_2 = mutation_processor.get_mutations(second.copy(),'2')
-            mut_3, wild_type_3, mixed_3 = mutation_processor.get_mutations(third.copy(),'3')
-            mut_1 = pd.concat([mut,wild_type])
-            mut_1.loc[:,'Quality'] = 1
-            mut_2 = pd.concat([mut_2,wild_type_2])
-            mut_2.loc[:,'Quality'] = 2
-            mut_3 = pd.concat([mut_3,wild_type_3])
-            mut_3.loc[:,'Quality'] = 3
+            for quality_data_item,quality_level in quality_data:
+                mut,wild_type,mixed = mutation_processor.get_mutations(quality_data_item.copy(),str(quality_level))    
+                combined_mut = pd.concat([mut,wild_type])
+                combined_mut['Quality'] = str(quality_level)
+                all_mutations.append(combined_mut)
 
-        data_report_1, whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1 = self.active_inactive(mut_1,1)
-        data_report_2, whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2 = self.active_inactive(mut_2,2)
-        data_report_3, whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3 = self.active_inactive(mut_3,3)
-        
-        def dict_file(whole_dataset, whole_act, whole_inact, inc_data,data_report):
-            filenames = {
-                'whole_dataset_out.csv': whole_dataset,
-                'whole_act_out.csv': whole_act,
-                'whole_inact_out.csv': whole_inact,
-                'inc_data_out.csv': inc_data,
-                'data_report_out.csv': data_report,
-            }
-            save_data_report(self.args.path_output,filenames)
-#togliere le ripetizioni di codice per salvare i file
-        dict_file(whole_dataset_1, whole_act_1, whole_inact_1, inc_data_1,data_report_1)
-        dict_file(whole_dataset_2, whole_act_2, whole_inact_2, inc_data_2,data_report_2)
-        dict_file(whole_dataset_3, whole_act_3, whole_inact_3, inc_data_3,data_report_3)
-        
-        return pd.concat([mut_1,mut_2,mut_3])
+                data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(combined_mut, quality_level)
+                report.append(data_report, whole_dataset, whole_act,whole_inact, inc_data)
+                filenames = {
+                    'whole_dataset_out.csv': whole_dataset,
+                    'whole_act_out.csv': whole_act,
+                    'whole_inact_out.csv': whole_inact,
+                    'inc_data_out.csv': inc_data,
+                    'data_report_out.csv': data_report,
+                }
+                save_data_report(self.args.path_output, filenames, quality=quality_level)
+        return pd.concat(all_mutations)
 
     def remove_row(self,data: pd.DataFrame):
         """Remove the row with missing values
@@ -101,11 +90,7 @@ class Cleaner():
         """ Remove duplicate appling a priority to the data
             :return: the filtered data
         """
-        rel_pri = ast.literal_eval(self.args.rel_pri)
-        for key in list(rel_pri.keys()):
-            new_key = f"'{key}'"
-            rel_pri[new_key] = rel_pri.pop(key)
-            
+        rel_pri = {f"'{key}'": value for key, value in ast.literal_eval(self.args.rel_pri).items()}        
         sty_pri = ast.literal_eval(self.args.sty_pri)
         src_pri = ast.literal_eval(self.args.src_pri)
 
@@ -114,13 +99,10 @@ class Cleaner():
         unique_data = data[~duplicates] 
 
         g_dupl = duplicate_data.groupby('Molecule ChEMBL ID')
-
-        indexes = [] #lista indici da tenere
+        indexes = []
 
         for _,grouper in g_dupl:
-            std_type_count = grouper['Standard Type'].value_counts()
-            dominant = std_type_count.idxmax()
-
+            dominant = grouper['Standard Type'].value_counts().idxmax()
             grouper = grouper[grouper['Standard Type'] == dominant]
 
             if dominant:
@@ -133,18 +115,11 @@ class Cleaner():
                 grouper.loc[:,'Source Description'] = grouper['Source Description'].map(src_pri)
                 grouper = grouper.sort_values(by=['Standard Type', 'Standard Relation', 'Source Description'], ascending=[True, True, True])
 
-            g_docs = grouper.groupby('Document ChEMBL ID')
-            max_group = None
-            max_len=0
-            for _,g in g_docs:
-                if len(g) > max_len:
-                    max_len = len(g)
-                    max_group = g
+            max_group = grouper.loc[grouper.groupby('Document ChEMBL ID')['Document ChEMBL ID'].count().idxmax()]
             if max_group is not None:
                 min_val = max_group["Standard Value"].idxmin()
                 indexes.append(min_val)
-            
-
+                
         filter_data = duplicate_data.loc[indexes]
 
         return pd.concat([unique_data,filter_data])
