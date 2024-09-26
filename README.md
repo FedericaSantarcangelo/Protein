@@ -19,3 +19,16 @@ This project processes the **ChEMBL** database to analyze protein targets and se
 2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
+
+### Output
+The cleaned data is organized into three categories, each with subfolders for different quality levels:
+    - **wild type**: for wild-type proteins.
+    - **mutation_target**: data focusing on mutation-specific proteins.
+    - **mixed**: all the other data
+
+The data is further divided intro three quality levels (1,2,3) reflecting different degrees of confidence:
+    - **Quality 1**: highest confidence level,with well-characterized data.
+    - **Quality 2**: medium confidence, possibly with minor uncertainties.
+    - **Quality 3**: lowest confidence, requires additional verification.
+
+    
