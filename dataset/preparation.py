@@ -129,20 +129,16 @@ class Cleaner():
             :return: the filtered data
         """
         # Filter the data based on the 'Standard Relation' column
-#modificare i nomi usati nella funzione per renderla più leggibile
         s_type = self.args.standard_type_act[0].split(',')
         df_act = data[data['Standard Type'].isin(s_type)]
 
         p_type = self.args.standard_type_perc[0].split(',')
         df_perc = data[data['Standard Type'].isin(p_type)]
         
-#modificare questa parte di codice per renderla più leggibile
         if 'Activity' not in df_perc['Standard Type'].unique():
-        # Se 'Activity' non è presente, filtra i dati in base alla soglia
             df_perc_act = df_perc[df_perc['Standard Value'] > self.args.thr_perc]
             df_perc_inact = df_perc[df_perc['Standard Value'] < self.args.thr_perc]
         else:
-        # Se 'Activity' è presente, filtra i dati in base al tipo standard
             df_perc_act = df_perc[df_perc['Standard Type'] != 'Activity']
             df_perc_act = df_perc_act[df_perc_act['Standard Value'] > self.args.thr_perc]
             df_perc_inact = df_perc[df_perc['Standard Type'] != 'Activity']
@@ -194,26 +190,6 @@ class Cleaner():
         df_whole = pd.concat([df_act_rev_act, df_act_rev_inact, df_act_rev_inc, df_perc_rev_act, df_perc_rev_inact])
         df_whole_inact = pd.concat([df_act_rev_inact, df_perc_rev_inact])
         df_whole_act = pd.concat([df_act_rev_act, df_perc_rev_act])
-
-#spostare questi dataframe e dizionario in un'altra funzione o file per rendere il codice più leggibile
-        data_report = pd.DataFrame(columns=[
-                                    'ratio active/inactive',
-                                    'total_df_records',
-                                    'total_std_types',
-                                    'total_inhibition',
-                                    'data_std_active',
-                                    'data_std_inactive',
-                                    'data_inhi_act',
-                                    'data_inhi_ina',
-                                    'data_std_active_min',
-                                    'data_std_active_max',
-                                    'data_std_inactive_min',
-                                    'data_std_inactive_max',
-                                    'data_inhi_act_min',
-                                    'data_inhi_act_max',
-                                    'data_inhi_ina_min',
-                                    'data_inhi_ina_max',
-                                    'quality'])
         
         ratio_act_ina = len(df_act_rev_act) / len(df_whole_inact)
         total_df_records = len(df_whole)

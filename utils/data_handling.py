@@ -1,6 +1,60 @@
+"""script function to manage data"""
 import pandas as pd
 import numpy as np
 from utils.file_utils import compentence
+
+#patterns for mutation
+patterns = [
+            r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
+            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi, e.g., A763_Y764
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi con trattino, e.g., D770-N771
+            r'\b[A-Z]\d{1,4}\b',  # Mutazione singola, e.g., L747
+
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del/[A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del/L858R
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del, [A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del,L858R
+
+            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}insFHEA',  # Delezione tra due amminoacidi, e.g., A763_Y764insFHEA
+
+            r'\b[A-Z]\d{1,4}/[A-Z]del\b',  # Mutazione doppia, e.g., L747S/T751del
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Mutazione d'intervallo, e.g., L747-T751del
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del,Sins\b',  # Mutazione d'intervallo con inserzione, e.g., L747-T751del,Sins
+            r'\bDel [A-Z]\d{1,4}/[A-Z]\d{1,4}\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., Del E746/A750
+            r'\bdel \d{1,4}-\d{1,4}\b',  # Delezione con intervallo numerico, e.g., del 746-750
+            r'\bDel\s*\d{1,4}\b',  # Delezione, e.g., Del19
+            
+            r'\bex\d{1,2}del\b',  # Delezione con notazione esone, e.g., ex19del
+            r'\bexon\d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon19 deletion
+            r'\bexon \d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon19 deletion
+            
+            r'\b del \(\d{1,4} to \d{1,4}\)\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
+            r'\b \d{1,4} to \d{1,4}\s* deletion\b',  # Delezione con intervallo numerico tra parentesi, e.g., 746 to 750 deletion
+
+            r'\bd(\d{1,4}-\d{1,4})\/([A-Z]\d{1,4}[A-Z])\b',  # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
+
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins\b',  # Mutazione di inserzione, e.g., D770-N771ins
+            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\s*ins\b',  # Inserzione tra due amminoacidi, e.g., A763_Y764ins
+        ]
+
+# report columns
+data_report = pd.DataFrame(columns=[
+                                    'ratio active/inactive',
+                                    'total_df_records',
+                                    'total_std_types',
+                                    'total_inhibition',
+                                    'data_std_active',
+                                    'data_std_inactive',
+                                    'data_inhi_act',
+                                    'data_inhi_ina',
+                                    'data_std_active_min',
+                                    'data_std_active_max',
+                                    'data_std_inactive_min',
+                                    'data_std_inactive_max',
+                                    'data_inhi_act_min',
+                                    'data_inhi_act_max',
+                                    'data_inhi_ina_min',
+                                    'data_inhi_ina_max',
+                                    'quality'])
+
 
 def data_perc_f(self, data: pd.DataFrame) -> pd.DataFrame:
         """ Filter the data perc if are less or greater than the threshold
