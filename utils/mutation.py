@@ -19,7 +19,6 @@ def find_mixed(mut: pd.DataFrame):
     :param no_mut: the dataframe without the mutation
     :return: no_mut with update
     """
-
     wrong_mut = mut.loc[mut['shifted_mutation'].str.contains('wrong')]
     mut = mut.drop(wrong_mut.index)
     wrong_mut.loc[:, 'mutation'] = False
@@ -39,13 +38,11 @@ def marge_data(path: str, organism: pd.DataFrame, mapping: pd.DataFrame, uniprot
     """
     if os.path.exists(path+'merged.csv'):
         return pd.read_csv(path+'merged.csv')
-    
     organism.rename(columns={'Entry': 'Accession Code'}, inplace=True)
     mapping.rename(columns={'UniProtID': 'Accession Code','Target_ChEMBLID':'ChEMBL DB'}, inplace=True)
     merged_df = organism.merge(mapping, on='Accession Code', how='inner').merge(uniprot, on=['Accession Code','ChEMBL DB'], how='inner')
     merge = merged_df[['Accession Code', 'ChEMBL DB', 'Known mutations']]
     merge.to_csv(path+'merged.csv', index=False)
-
     return merge
 
 def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation_target',id_column: str='Target ChEMBL ID') -> None:
@@ -58,24 +55,18 @@ def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation
     try:
         if id_column not in data.columns:
             raise ValueError(f"{id_column} not in the columns of the dataframe")
-        
         full_path = os.path.join(args.path_output + f_path)
         if not os.path.exists(full_path):
             os.makedirs(full_path, exist_ok=True)
-
         full_path = os.path.join(full_path +f'/{f_path}'+f'_{flag}')
         if not os.path.exists(full_path):
             os.makedirs(full_path, exist_ok=True)
-
         cleaner = Cleaner(args)
-
         if flag != '1':
             drop_dupicates = data.drop_duplicates()
         else:
             drop_dupicates = cleaner.remove_duplicate(data)
-
         grouped = drop_dupicates.groupby(id_column)
-
         for name, group in grouped:
             output_path = os.path.join(full_path, f"{name}_{flag}.csv")
             if os.path.exists(output_path):
@@ -92,7 +83,6 @@ def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation
         print(f"Error: {e}")
     except IOError as e:
         print(f"Error I/O: {e}")
-    
     return drop_dupicates
 
 
