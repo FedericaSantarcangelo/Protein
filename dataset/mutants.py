@@ -115,7 +115,6 @@ class Mutation():
         :param all_mut: set of known mutations
         :return: dataframe with mutations
         """
-        
         combined_pattern = re.compile('|'.join(patterns))
         mutant = mut.copy()
         for index, row in mutant.iterrows():
@@ -144,7 +143,6 @@ class Mutation():
                         mutant.loc[index, 'mutant_known'] = '/'.join(known_flags)
                         mutant.loc[index, 'mutant'] = '/'.join(mutations_found)
                         mutant.loc[index, 'shifted_mutation'] = '/'.join(shifted_mutations)
-
         return mutant
     
     def format_output(self,no_mut,mut,known_mutations,flag):

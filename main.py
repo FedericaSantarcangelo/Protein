@@ -14,7 +14,8 @@ from dataset.preparation import Cleaner
 
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.args import data_cleaning_args, file_args ,model_args
-from utils.file_utils import load_file, process_directory, drop_columns
+from utils.file_utils import load_file, process_directory, drop_columns,save_other_files
+from utils.data_handling import enrich_dataframe_with_protein_classifications
 from models.classifiers import train_classifier
 from models.regressors import train_regressor
 
@@ -29,7 +30,7 @@ def parser_args():
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     file_args(parser)
     data_cleaning_args(parser)
-    parser.add_argument('--path_db', type = str, default = '/home/luca/LAB/LAB_federica/chembl1865/EGFR.csv',
+    parser.add_argument('--path_db', type = str, default = '/home/luca/LAB/LAB_federica/chembl1865/HDAC6.csv',
                         help = 'Specify the path of the database')
     parser.add_argument('--model', type=str, choices=['classifier', 'regressor'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
@@ -77,7 +78,8 @@ def main():
 
     cleaner = Cleaner(args)
     cleaned_data = process_data(cleaner, args)
-    
+    protein_classification = enrich_dataframe_with_protein_classifications(cleaned_data)
+    protein_classification.to_csv(args.path_output+'protein_classification.csv', index=False)
     df=process_molecules_and_calculate_descriptors(cleaned_data)
     if args.model_type == 'classifier':
         train_classifier(df,args)

@@ -24,11 +24,11 @@ class Cleaner():
         """
         data = self.remove_row(data)
         data = self.filter_data(data)
-        data = remove_salts(data) 
-        first , second, third = selct_quality(data)
-        quality_data = [(first,2),(second,2),(third,3)] #quality level
+        data = remove_salts(data, self.assay) 
+        first , second, third = self.selct_quality(data)
+        quality_data = [(first,1),(second,2),(third,3)]
         all_mutations=[]
-        report = []   
+        all_mixed = []
         if self.args.mutation:
             mutation_processor = Mutation(self.args)
             for quality_data_item,quality_level in quality_data:
@@ -36,9 +36,11 @@ class Cleaner():
                 combined_mut = pd.concat([mut,wild_type])
                 combined_mut['Quality'] = str(quality_level)
                 all_mutations.append(combined_mut)
-
-                data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(combined_mut, quality_level)
-                report.append(data_report, whole_dataset, whole_act,whole_inact, inc_data)
+                all_mixed.append(mixed)
+                if not combined_mut.empty:
+                    data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(combined_mut, quality_level)
+                else:
+                    data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(mixed, quality_level)
                 filenames = {
                     'whole_dataset_out.csv': whole_dataset,
                     'whole_act_out.csv': whole_act,
@@ -46,8 +48,12 @@ class Cleaner():
                     'inc_data_out.csv': inc_data,
                     'data_report_out.csv': data_report,
                 }
-                save_data_report(self.args.path_output, filenames, quality=quality_level)
-        return pd.concat(all_mutations)
+                save_data_report(self.args.path_output, filenames)
+        if all_mutations and len(all_mutations) > 100:
+            return pd.concat(all_mutations)
+        else:
+          #  all_mixed.append(all_mutations)
+            return pd.concat(all_mixed)
 
     def remove_row(self,data: pd.DataFrame):
         """Remove the row with missing values
@@ -68,7 +74,7 @@ class Cleaner():
         if self.args.standard_type_log != 'None':
             l_type = self.args.standard_type_log[0].split(',')
             data_log = data[data['Standard Type'].isin(l_type)]
-            data_log = data_log_f(data_log)
+            data_log = data_log_f(self.args.standard_type_log ,data_log)
 
         if self.args.standard_type_act != 'None':
             s_type = self.args.standard_type_act[0].split(',')
@@ -81,7 +87,7 @@ class Cleaner():
             data_perc = data[data['Standard Type'].isin(p_type)]
             pattern = '|'.join(map(re.escape, assay_desc))
             data_perc = data_perc[data_perc['Assay Description'].str.contains(pattern, regex=True, na=False)]
-            data_perc = data_perc_f(data_perc)
+            data_perc = data_perc_f(self.args.thr_perc , data_perc)
         
         df= pd.concat([data_log, data_act, data_perc])
         return df
@@ -90,7 +96,12 @@ class Cleaner():
         """ Remove duplicate appling a priority to the data
             :return: the filtered data
         """
-        rel_pri = {f"'{key}'": value for key, value in ast.literal_eval(self.args.rel_pri).items()}        
+                    
+        rel_pri = ast.literal_eval(self.args.rel_pri)
+        for key in list(rel_pri.keys()):
+            new_key = f"'{key}'"
+            rel_pri[new_key] = rel_pri.pop(key)
+            
         sty_pri = ast.literal_eval(self.args.sty_pri)
         src_pri = ast.literal_eval(self.args.src_pri)
 
@@ -102,7 +113,9 @@ class Cleaner():
         indexes = []
 
         for _,grouper in g_dupl:
-            dominant = grouper['Standard Type'].value_counts().idxmax()
+            std_type_count = grouper['Standard Type'].value_counts()
+            dominant = std_type_count.idxmax()
+
             grouper = grouper[grouper['Standard Type'] == dominant]
 
             if dominant:
@@ -115,14 +128,42 @@ class Cleaner():
                 grouper.loc[:,'Source Description'] = grouper['Source Description'].map(src_pri)
                 grouper = grouper.sort_values(by=['Standard Type', 'Standard Relation', 'Source Description'], ascending=[True, True, True])
 
-            max_group = grouper.loc[grouper.groupby('Document ChEMBL ID')['Document ChEMBL ID'].count().idxmax()]
+            g_docs = grouper.groupby('Document ChEMBL ID')
+            max_group = None
+            max_len=0
+            for _,g in g_docs:
+                if len(g) > max_len:
+                    max_len = len(g)
+                    max_group = g
             if max_group is not None:
                 min_val = max_group["Standard Value"].idxmin()
                 indexes.append(min_val)
-                
+            
+
         filter_data = duplicate_data.loc[indexes]
 
         return pd.concat([unique_data,filter_data])
+    
+    def selct_quality( self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+            In data there are only the records of interest: they represent the first quality data. 
+            In other there are records that are not of interest: they represent the second quality data.
+            return: first, second and third quality data
+        """ 
+        other = data.copy()
+        if self.args.assay_type != 'None':
+            data = data.loc[data['Assay Type'] == self.args.assay_type]
+        if self.args.assay_organism != 'None':
+            data = data.loc[data['Assay Organism'] == self.args.assay_organism]
+        if self.args.BAO_Label != 'None':  
+            data = data.loc[data['BAO Label'] == self.args.BAO_Label]
+        if self.args.target_type != 'None':
+            data = data.loc[data['Target Type'] == self.args.target_type]
+
+        other = other.loc[~other.index.isin(data.index)]
+        other = other[~other['Molecule ChEMBL ID'].isin(data['Molecule ChEMBL ID'])] 
+        second,third = split_second(other)
+        return data,second,third
 
     def active_inactive(self, data: pd.DataFrame,flag):
         """ Filter the data based on active and inactive values
@@ -168,15 +209,18 @@ class Cleaner():
 
         df_act_act = df_act[df_act['Standard Value'] <= self.args.thr_act]
         df_act_rev_act = df_act_act.copy()
-        df_act_rev_act.loc[:,'Class'] = 1
+        if not df_act_rev_act.empty:
+            df_act_rev_act.loc[:, 'Class'] = 1
         
         df_act_inact = df_act[df_act['Standard Value'] >= self.args.thr_act*10]
         df_act_rev_inact = df_act_inact.copy()
-        df_act_rev_inact.loc[:,'Class'] = 0
+        if not df_act_rev_inact.empty:
+            df_act_rev_inact.loc[:,'Class'] = 0
 
         df_act_inc = df_act.loc[(df_act['Standard Value'] > self.args.thr_act) & (df_act['Standard Value'] < self.args.thr_act * 10)]
         df_act_rev_inc = df_act_inc.copy()
-        df_act_rev_inc.loc[:,'Class'] = 2
+        if not df_act_rev_inc.empty:
+            df_act_rev_inc.loc[:,'Class'] = 2
 
         act_rev_act_c = df_act_rev_act['Standard Value'].count()
         act_rev_inact_c = df_act_rev_inact['Standard Value'].count()
@@ -190,8 +234,11 @@ class Cleaner():
         df_whole = pd.concat([df_act_rev_act, df_act_rev_inact, df_act_rev_inc, df_perc_rev_act, df_perc_rev_inact])
         df_whole_inact = pd.concat([df_act_rev_inact, df_perc_rev_inact])
         df_whole_act = pd.concat([df_act_rev_act, df_perc_rev_act])
-        
-        ratio_act_ina = len(df_act_rev_act) / len(df_whole_inact)
+        if not df_whole_inact.empty:
+            ratio_act_ina = len(df_act_rev_act) / len(df_whole_inact)
+        else:
+            ratio_act_ina = len(df_act_rev_act) / 1
+
         total_df_records = len(df_whole)
         total_std_types = len(df_whole_act)
         total_inhibition = len(df_perc_rev_inact)
@@ -215,6 +262,26 @@ class Cleaner():
             'data_inhi_ina_max':perc_rev_inact_max,
             'quality': flag
     }
+
+        data_report = pd.DataFrame(columns=[
+                                    'ratio active/inactive',
+                                    'total_df_records',
+                                    'total_std_types',
+                                    'total_inhibition',
+                                    'data_std_active',
+                                    'data_std_inactive',
+                                    'data_inhi_act',
+                                    'data_inhi_ina',
+                                    'data_std_active_min',
+                                    'data_std_active_max',
+                                    'data_std_inactive_min',
+                                    'data_std_inactive_max',
+                                    'data_inhi_act_min',
+                                    'data_inhi_act_max',
+                                    'data_inhi_ina_min',
+                                    'data_inhi_ina_max',
+                                    'quality'])
+
         for key,row in data_dict.items():
             if pd.isna(row):
                 data_dict[key] = 0

@@ -72,28 +72,7 @@ def process_directory(path: str, cleaner):
     cleaned_df = pd.concat(cleaned_dfs, ignore_index=True)    
     return cleaned_df
 
-def selct_quality(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-            In data there are only the records of interest: they represent the first quality data. 
-            In other there are records that are not of interest: they represent the second quality data.
-            return: first, second and third quality data
-        """ 
-        other = data.copy()
-        if self.args.assay_type != 'None':
-            data = data.loc[data['Assay Type'] == self.args.assay_type]
-        if self.args.assay_organism != 'None':
-            data = data.loc[data['Assay Organism'] == self.args.assay_organism]
-        if self.args.BAO_Label != 'None':  
-            data = data.loc[data['BAO Label'] == self.args.BAO_Label]
-        if self.args.target_type != 'None':
-            data = data.loc[data['Target Type'] == self.args.target_type]
-
-        other = other.loc[~other.index.isin(data.index)]
-        other = other[~other['Molecule ChEMBL ID'].isin(data['Molecule ChEMBL ID'])] 
-        second,third = split_second(other)
-        return data,second,third
-
-def compentence(self, data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
+def compentence(data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
     """Filter data based on the confidence score in the assays file
             :return: the filtered data
     """
