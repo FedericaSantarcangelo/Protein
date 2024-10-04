@@ -78,8 +78,6 @@ def main():
 
     cleaner = Cleaner(args)
     cleaned_data = process_data(cleaner, args)
-    protein_classification = enrich_dataframe_with_protein_classifications(cleaned_data)
-    protein_classification.to_csv(args.path_output+'protein_classification.csv', index=False)
     df=process_molecules_and_calculate_descriptors(cleaned_data)
     if args.model_type == 'classifier':
         train_classifier(df,args)

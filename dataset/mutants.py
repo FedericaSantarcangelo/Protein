@@ -5,7 +5,7 @@ import re
 import pandas as pd
 from utils.file_utils import load_file, save_other_files
 from utils.mutation import *
-
+from utils.data_handling import protein_classification
 from utils.data_handling import patterns
 
 aminoacid=['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
@@ -15,8 +15,9 @@ class Mutation():
         self.args = args
         self.pattern = re.compile(r'\b[A-Z]\d{1,4}[A-Z]\b|mutant|wild type|wild_type|\b[A-Z]\d{1,4}-[A-Z]\d{1,4}') 
         self.shift=[-2,-1,1,2]
-        uniprot, mapping, organism = load_file(self.args.path_uniprot), load_file(self.args.path_mapping), load_file(self.args.path_organism)
-        self.merged_uniprot = marge_data(self.args.path_output,organism, mapping, uniprot)
+        self.uniprot, self.mapping = load_file(self.args.path_uniprot), load_file(self.args.path_mapping)
+        self.organism, self.reviewed = load_file(self.args.path_organism), load_file(self.args.path_reviewed)
+        self.merged_uniprot = marge_data(self.args.path_output,self.organism, self.mapping, self.uniprot)
 
         
     def get_mutations(self, data: pd.DataFrame, flag='1'):
@@ -26,11 +27,12 @@ class Mutation():
         :param data: data dataframe with mutations to be found
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
+        protein_family = protein_classification(data,self.reviewed,self.mapping)
         knonw_mutations,all_mut = self.format_uniprot(self.merged_uniprot)
         no_mut,mut=self.split_data(data.copy())
         mutant = self.find_mutant(mut,all_mut)
         mut, wild_type, mixed = self.format_output(no_mut,mutant,knonw_mutations, flag)
-        return mut, wild_type, mixed
+        return mut, wild_type, mixed, protein_family 
     
     def split_data(self, data: pd.DataFrame):
         """
