@@ -99,3 +99,11 @@ def remove_salts( data: pd.DataFrame, assay) -> pd.DataFrame:
     data = compentence(data, assay)
     return data
 
+def protein_statistics(protein_family: pd.DataFrame,mut: pd.DataFrame,wt: pd.DataFrame,mixed: pd.DataFrame,output_path) -> pd.DataFrame:
+    """
+    Get the statistics of the protein family
+    :return: the statistics of the protein family
+    """
+    
+
+

@@ -5,7 +5,6 @@ import re
 import pandas as pd
 from utils.file_utils import load_file, save_other_files
 from utils.mutation import *
-from utils.data_handling import protein_classification
 from utils.data_handling import patterns
 
 aminoacid=['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
@@ -17,28 +16,23 @@ class Mutation():
         self.shift=[-2,-1,1,2]
         self.uniprot, self.mapping = load_file(self.args.path_uniprot), load_file(self.args.path_mapping)
         self.organism, self.reviewed = load_file(self.args.path_organism), load_file(self.args.path_reviewed)
-        self.merged_uniprot = marge_data(self.args.path_output,self.organism, self.mapping, self.uniprot)
 
-        
     def get_mutations(self, data: pd.DataFrame, flag='1'):
         """
         Get mutations main function
-        :param uniprot: uniprot dataframe with mutations known
-        :param data: data dataframe with mutations to be found
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
         """
-        protein_family = protein_classification(data,self.reviewed,self.mapping)
-        knonw_mutations,all_mut = self.format_uniprot(self.merged_uniprot)
+        merged_uniprot = marge_data(self.args.path_output,self.organism, self.mapping, self.uniprot,self.reviewed)
+        knonw_mutations,all_mut = self.format_uniprot(merged_uniprot)
         no_mut,mut=self.split_data(data.copy())
         mutant = self.find_mutant(mut,all_mut)
         mut, wild_type, mixed = self.format_output(no_mut,mutant,knonw_mutations, flag)
-        return mut, wild_type, mixed, protein_family 
+        return mut, wild_type, mixed
     
     def split_data(self, data: pd.DataFrame):
         """
         Split data considering mutations: if there are no mutations, 
         the row is added to no_mut, otherwise to mut
-        :param data: data dataframe
         :return: no_mut, mut
         """
         required_columns = ['mutation','mutant_known', 'mutant', 'shifted_mutation','Accession Code']
@@ -54,7 +48,6 @@ class Mutation():
     def format_uniprot(self, uniprot: pd.DataFrame):
         """
         Format uniprot dataframe
-        :param uniprot: uniprot dataframe
         :return: dictionary with keys (Accession Code, CheMBL ID):[mutations]
         """ 
         uniprot = uniprot.dropna(subset=['Known mutations'])
@@ -79,8 +72,6 @@ class Mutation():
     def shift_mutation(self, mutation: str, shift: list):
         """
         Shift mutation
-        :param mutation: mutation
-        :param shift: shift
         :return: shifted mutation
         """        
         if re.match(r'\b[A-Z]\d{1,4}[A-Z]\b', mutation):
@@ -100,9 +91,7 @@ class Mutation():
         
     def find_and_shift(self, mutation, uniprot_set):
         """
-        Cerca la mutazione in uniprot o prova gli shift.
-        param mutation: mutazione
-        param uniprot_set: set di mutazioni conosciute
+        Find if exists the mutation in uniprot and shift it.
         return: True se la mutazione è presente in uniprot, False altrimenti
         e la mutazione shiftata"""
         if mutation in uniprot_set:
@@ -157,7 +146,6 @@ class Mutation():
         wt = re.compile(r'\b(wild type|wild_type)\b')
         for index, row in mut.iterrows():
             assay_description = row['Assay Description']
-
             if row['mutant'] == '' and wt.search(assay_description):
                 mut.loc[index, 'mutant'] = 'wild type'
             if not row.get('mutant_known', False):
@@ -166,7 +154,8 @@ class Mutation():
                 if row['Target ChEMBL ID'] == key[1]:
                     accession_code = key[0]
                     mut.loc[index, 'Accession Code'] = accession_code
-                    break  # Stop searching once we find the Accession Code 
+                    break  # Stop searching once we find the Accession Code
+
         wild_type = mut[mut['mutant'] == 'wild type'].copy()
         no_mut.loc[:,'mutant'] = 'mixed'
         mut = mut[mut['mutant'] != 'wild type']

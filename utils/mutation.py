@@ -25,23 +25,22 @@ def find_mixed(mut: pd.DataFrame):
     wrong_mut.loc[:, 'mutant_known'] = ''
     wrong_mut.loc[:, 'mutant'] = 'mixed'
     wrong_mut.loc[:, 'shifted_mutation'] = ''
-    wrong_mut.loc[:, 'Accession Code'] = ''
     return wrong_mut,mut
 
-def marge_data(path: str, organism: pd.DataFrame, mapping: pd.DataFrame, uniprot: pd.DataFrame) -> pd.DataFrame:
+def marge_data(path: str, organism: pd.DataFrame, mapping: pd.DataFrame, uniprot: pd.DataFrame, reviewed: pd.DataFrame) -> pd.DataFrame:
     """
     Merge two dataframes on a specific column
-    :param organism: the first dataframe
-    :param mapping: the second dataframe
-    :param on: the column to merge the dataframes
     :return: the merged dataframe
     """
     if os.path.exists(path+'merged.csv'):
         return pd.read_csv(path+'merged.csv')
     organism.rename(columns={'Entry': 'Accession Code'}, inplace=True)
     mapping.rename(columns={'UniProtID': 'Accession Code','Target_ChEMBLID':'ChEMBL DB'}, inplace=True)
-    merged_df = organism.merge(mapping, on='Accession Code', how='inner').merge(uniprot, on=['Accession Code','ChEMBL DB'], how='inner')
-    merge = merged_df[['Accession Code', 'ChEMBL DB', 'Known mutations']]
+    reviewed.rename(columns={'Entry': 'Accession Code'}, inplace=True)
+    merged_df = reviewed.merge(organism.merge(mapping, on='Accession Code', how='inner').merge(uniprot, 
+                            on=['Accession Code','ChEMBL DB'], how='inner'), on=['Accession Code','Protein families'], how='left')
+    merge = merged_df[['Accession Code', 'ChEMBL DB', 'Known mutations', 'Protein families']]
+    merge.drop(merge[merge['ChEMBL DB'].isnull()].index, inplace=True)
     merge.to_csv(path+'merged.csv', index=False)
     return merge
 

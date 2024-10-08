@@ -32,7 +32,8 @@ class Cleaner():
         if self.args.mutation:
             mutation_processor = Mutation(self.args)
             for quality_data_item,quality_level in quality_data:
-                mut,wild_type,mixed = mutation_processor.get_mutations(quality_data_item.copy(),str(quality_level))    
+                mut,wild_type,mixed,protein_family = mutation_processor.get_mutations(quality_data_item.copy(),str(quality_level)) 
+                protein_statistics(protein_family,mut,wild_type,mixed,self.args.path_output) #cambiare
                 combined_mut = pd.concat([mut,wild_type])
                 combined_mut['Quality'] = str(quality_level)
                 all_mutations.append(combined_mut)
