@@ -19,8 +19,9 @@ class Cleaner():
         self.assay = load_file(self.args.path_assay)
 
     def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Main function to clean the data
-            :return: the cleaned data
+        """
+        Main function to clean the data
+        :return: the cleaned data
         """
         data = self.remove_row(data)
         data = self.filter_data(data)
@@ -57,8 +58,9 @@ class Cleaner():
             return pd.concat(all_mixed)
 
     def remove_row(self,data: pd.DataFrame):
-        """Remove the row with missing values
-            :return: the data without missing values
+        """
+        Remove the row with missing values
+        :return: the data without missing values
         """
         data = data.dropna(subset=['Smiles',
                             'Standard Type',
@@ -69,8 +71,9 @@ class Cleaner():
         return data
 
     def filter_data(self, data: pd.DataFrame):
-        """ Filter the data based on the standard type
-            :return: the filtered data
+        """
+        Filter the data based on the standard type
+        :return: the filtered data
         """
         if self.args.standard_type_log != 'None':
             l_type = self.args.standard_type_log[0].split(',')
@@ -94,10 +97,10 @@ class Cleaner():
         return df
 
     def remove_duplicate(self, data: pd.DataFrame) -> pd.DataFrame: 
-        """ Remove duplicate appling a priority to the data
-            :return: the filtered data
-        """
-                    
+        """ 
+        Remove duplicate appling a priority to the data
+        :return: the filtered data
+        """            
         rel_pri = ast.literal_eval(self.args.rel_pri)
         for key in list(rel_pri.keys()):
             new_key = f"'{key}'"
@@ -147,9 +150,9 @@ class Cleaner():
     
     def selct_quality( self, data: pd.DataFrame) -> pd.DataFrame:
         """
-            In data there are only the records of interest: they represent the first quality data. 
-            In other there are records that are not of interest: they represent the second quality data.
-            return: first, second and third quality data
+        In data there are only the records of interest: they represent the first quality data. 
+        In other there are records that are not of interest: they represent the second quality data.
+        return: first, second and third quality data
         """ 
         other = data.copy()
         if self.args.assay_type != 'None':
@@ -167,8 +170,9 @@ class Cleaner():
         return data,second,third
 
     def active_inactive(self, data: pd.DataFrame,flag):
-        """ Filter the data based on active and inactive values
-            :return: the filtered data
+        """ 
+        Filter the data based on active and inactive values
+        :return: the filtered data
         """
         # Filter the data based on the 'Standard Relation' column
         s_type = self.args.standard_type_act[0].split(',')

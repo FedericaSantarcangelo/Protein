@@ -54,8 +54,6 @@ def set_random_seed(seed: int) -> None:
 def process_data(cleaner, args):
     """
     Workflow for data processing before model training
-    :param cleaner: the cleaner instance
-    :param args: the arguments
     :return: the processed dataframe
     """
     timestamp = datetime.now().strftime('%Y%m%d%H%M')

@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from utils.file_utils import compentence
 
-#patterns for mutation
+#patterns for finding mutations in the assay description field
 patterns = [
             r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
             r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi, e.g., A763_Y764
@@ -38,8 +38,9 @@ patterns = [
 
 
 def data_perc_f(thr_perc, data: pd.DataFrame) -> pd.DataFrame:
-        """ Filter the data perc if are less or greater than the threshold
-            :return: the filtered data
+        """ 
+        Filter the data perc if are less or greater than the threshold
+        :return: the filtered data
         """
         def filter_conditions(row):
             if row['Standard Type'] == 'Inhibition' and row['Standard Value'] > thr_perc:
@@ -52,8 +53,9 @@ def data_perc_f(thr_perc, data: pd.DataFrame) -> pd.DataFrame:
         return filtered_data
 
 def data_log_f(standard_type_log ,data: pd.DataFrame) -> pd.DataFrame:
-        """ Log the data and convert standard types
-            :return: the logarithmic data
+        """ 
+        Log the data and convert standard types
+        :return: the logarithmic data
         """
         if (data['Standard Units'] == 'mM').any():
             data.loc[data['Standard Units'] == 'mM', 'Standard Value'] = [
@@ -72,8 +74,9 @@ def data_log_f(standard_type_log ,data: pd.DataFrame) -> pd.DataFrame:
         return data
 
 def data_act_f(data: pd.DataFrame) -> pd.DataFrame:
-        """ Act on the data based on standard units
-            :return: the activated data
+        """ 
+        Act on the data based on standard units
+        :return: the activated data
         """
         data = data.copy()
         if (data['Standard Units'] == 'mM').any():
@@ -86,8 +89,9 @@ def data_act_f(data: pd.DataFrame) -> pd.DataFrame:
         return data
 
 def remove_salts( data: pd.DataFrame, assay) -> pd.DataFrame:
-    """ Remove the salts from the SMILES
-        :return: the SMILES without salts
+    """ 
+    Remove the salts from the SMILES
+    :return: the SMILES without salts
     """
     cleaned_smiles = []
 
@@ -104,6 +108,6 @@ def protein_statistics(protein_family: pd.DataFrame,mut: pd.DataFrame,wt: pd.Dat
     Get the statistics of the protein family
     :return: the statistics of the protein family
     """
-    
+    #function to create the statistics file for the protein family of interest
 
 

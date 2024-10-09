@@ -1,4 +1,4 @@
-"""script to manage files and data"""
+"""script to manage files and data cleaning"""
 import os 
 import glob
 import pandas as pd

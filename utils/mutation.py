@@ -4,7 +4,6 @@ import pandas as pd
 def population(data:pd.DataFrame):
     """
     Count the number of the document ChEMBL ID and assign the population to the dataframe
-    :param data: the dataframe to be populated
     :return: the populated dataframe
     """
     data.sort_values(by='Document ChEMBL ID', inplace=True)
@@ -15,8 +14,6 @@ def population(data:pd.DataFrame):
 def find_mixed(mut: pd.DataFrame):
     """
     Find wrong mutation in the dataframe mut and move them in the dataframe no_mut with mixed label
-    :param mut: the dataframe with the mutation
-    :param no_mut: the dataframe without the mutation
     :return: no_mut with update
     """
     wrong_mut = mut.loc[mut['shifted_mutation'].str.contains('wrong')]
@@ -47,8 +44,7 @@ def marge_data(path: str, organism: pd.DataFrame, mapping: pd.DataFrame, uniprot
 def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation_target',id_column: str='Target ChEMBL ID') -> None:
     """
     Save the mutation target
-    :param data: the data to be saved
-    :param path: the path where to save the data
+    return: the updated dataframe without duplicates
     """
     from dataset.preparation import Cleaner
     try:

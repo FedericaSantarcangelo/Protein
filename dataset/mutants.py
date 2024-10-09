@@ -72,7 +72,7 @@ class Mutation():
     def shift_mutation(self, mutation: str, shift: list):
         """
         Shift mutation
-        :return: shifted mutation
+        :return: shifted mutation +-1 and +-2
         """        
         if re.match(r'\b[A-Z]\d{1,4}[A-Z]\b', mutation):
             shifted_mutation = []
@@ -92,8 +92,8 @@ class Mutation():
     def find_and_shift(self, mutation, uniprot_set):
         """
         Find if exists the mutation in uniprot and shift it.
-        return: True se la mutazione è presente in uniprot, False altrimenti
-        e la mutazione shiftata"""
+        return: True with the shifted mutation if the mutation is in uniprot, False with the shifted mutation otherwise
+        """
         if mutation in uniprot_set:
             return True, self.shift_mutation(mutation, self.shift)
         else:
@@ -102,8 +102,6 @@ class Mutation():
     def find_mutant(self, mut: pd.DataFrame, all_mut: set):
         """
         Find mutations of any type in the assay description (single, double, triple, wild type)
-        :param mut: dataframe with mutations to be found
-        :param all_mut: set of known mutations
         :return: dataframe with mutations
         """
         combined_pattern = re.compile('|'.join(patterns))
@@ -137,10 +135,9 @@ class Mutation():
         return mutant
     
     def format_output(self,no_mut,mut,known_mutations,flag):
-        """Formatting final output
-        param no_mut: dataframe with no mutations
-        param mut: dataframe with mutations
-        param known_mutations: dictionary with known mutations
+        """
+        Formatting final output
+        return: formatted dataframes
         """
         mut = mut.sort_values(by='mutant')
         wt = re.compile(r'\b(wild type|wild_type)\b')

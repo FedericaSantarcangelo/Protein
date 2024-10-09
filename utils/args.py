@@ -1,8 +1,9 @@
 from argparse import ArgumentParser
 
 def data_cleaning_args(parser : ArgumentParser) -> None:
-    """ Add arguments for data cleaning 
-        :param parser: the parser istance
+    """
+    Add arguments for data cleaning 
+    :param parser: the parser istance
     """
     # Add arguments for data cleaning based on the fields of interest
     parser.add_argument('--assay_type', type = str, default = 'None', help = 'Specify the assay type to filter the data')
@@ -30,7 +31,10 @@ def data_cleaning_args(parser : ArgumentParser) -> None:
                         help="source priority")
     
 def file_args(parser: ArgumentParser) -> None:
-    """ Add arguments for file paths"""
+    """ 
+    Add arguments for file paths
+    :param parser: the parser istance
+    """
     parser.add_argument('--path_uniprot', type = str, default = '/home/federica/LAB/df_uniprot_details.tsv', 
                         help = 'Specify the path of uniprot detailes file')
     parser.add_argument('--path_mapping', type = str, default= '/home/federica/LAB2/chembl_uniprot_mapping.txt', 
@@ -48,7 +52,8 @@ def file_args(parser: ArgumentParser) -> None:
         
         
 def model_args(parser: ArgumentParser) -> None:
-    """ Add arguments for model training
+    """ 
+    Add arguments for model training
     :param parser: the parser istance
     """
     parser.add_argument('--model_type', type=str, default='linear', choices=['linear', 'logistic', 'svm', 'rf'],
