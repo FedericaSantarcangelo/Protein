@@ -14,7 +14,7 @@ from dataset.preparation import Cleaner
 
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.args import data_cleaning_args, file_args ,model_args
-from utils.file_utils import load_file, process_directory, drop_columns
+from utils.file_utils import load_file, process_directory, drop_columns, add_protein_family
 from models.classifiers import train_classifier
 from models.regressors import train_regressor
 
@@ -64,9 +64,11 @@ def process_data(cleaner, args):
 
     if os.path.isdir(args.path_db):
         df = process_directory(args.path_db, cleaner)
+
     else:
         df = load_file(args.path_db)
         df = drop_columns(df)
+        df = add_protein_family(df, args.path_proteinfamily)
         df = cleaner.clean_data(df)
     return df
 

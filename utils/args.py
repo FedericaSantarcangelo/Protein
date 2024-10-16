@@ -41,12 +41,11 @@ def file_args(parser: ArgumentParser) -> None:
                         help = 'Specify the path of the mapping file between chembl and uniprot')
     parser.add_argument('--path_organism', type = str, default= '/home/federica/LAB2/uniprotkb_AND_model_organism_9606_2024_07_19_mutations.tsv',
                         help = 'Specify the path of the uniptot and model organism file')
-    parser.add_argument('--path_reviewed', type = str, default = '/home/federica/LAB2/uniprotkb_reviewed_true_AND_model_organ_2024_10_03.tsv', 
-                        help = 'Specify the path of the reviewed file')
     parser.add_argument('--path_output', type = str, default = '/home/luca/LAB/LAB_federica/', 
                         help = 'Specify the path where to save the output file')
     parser.add_argument('--path_assay',type=str, default='/home/federica/LAB2/assays.csv', help='Specify the name of the assay file with confidence informations')
-    
+    parser.add_argument('--path_proteinfamily', type=str, default='/home/federica/LAB2/protein_class.csv', 
+                        help='Specify the path of the protein family classification file')
     # Add arguments for mutational analysis
     parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')
         

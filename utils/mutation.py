@@ -24,7 +24,7 @@ def find_mixed(mut: pd.DataFrame):
     wrong_mut.loc[:, 'shifted_mutation'] = ''
     return wrong_mut,mut
 
-def marge_data(path: str, organism: pd.DataFrame, mapping: pd.DataFrame, uniprot: pd.DataFrame, reviewed: pd.DataFrame) -> pd.DataFrame:
+def marge_data(path: str, organism: pd.DataFrame, mapping: pd.DataFrame, uniprot: pd.DataFrame) -> pd.DataFrame:
     """
     Merge two dataframes on a specific column
     :return: the merged dataframe
@@ -33,9 +33,8 @@ def marge_data(path: str, organism: pd.DataFrame, mapping: pd.DataFrame, uniprot
         return pd.read_csv(path+'merged.csv')
     organism.rename(columns={'Entry': 'Accession Code'}, inplace=True)
     mapping.rename(columns={'UniProtID': 'Accession Code','Target_ChEMBLID':'ChEMBL DB'}, inplace=True)
-    reviewed.rename(columns={'Entry': 'Accession Code'}, inplace=True)
-    merged_df = reviewed.merge(organism.merge(mapping, on='Accession Code', how='inner').merge(uniprot, 
-                            on=['Accession Code','ChEMBL DB'], how='inner'), on=['Accession Code','Protein families'], how='left')
+    merged_df = organism.merge(mapping, on='Accession Code', how='inner').merge(uniprot, 
+                            on=['Accession Code','ChEMBL DB'], how='inner')
     merge = merged_df[['Accession Code', 'ChEMBL DB', 'Known mutations', 'Protein families']]
     merge.drop(merge[merge['ChEMBL DB'].isnull()].index, inplace=True)
     merge.to_csv(path+'merged.csv', index=False)

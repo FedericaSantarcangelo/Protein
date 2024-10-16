@@ -4,6 +4,7 @@ import glob
 import pandas as pd
 import sys
 
+
 def detect_delimiter(path: str, num_lines = 5) -> str:
     """
     Detect the delimiter of the file by reading the first num_lines of the file
@@ -43,7 +44,29 @@ def drop_columns(df: pd.DataFrame) -> pd.DataFrame:
                             'Assay Subcellular Fraction','Assay Parameters','Assay Variant Accession','Source ID',
                             'Document Journal','Document Year','Properties','Properties','Action Type'])
 
-def process_directory(path: str, cleaner):
+
+def add_protein_family(data, protein_file):
+    """
+    Add the protein family information to the data based on 'Target ChEMBL ID'.
+    :return: DataFrame with protein family columns added
+    """
+    # Read the protein family file
+    protein_family = pd.read_csv(protein_file)
+    
+    # Ensure there are no duplicate chembl_id entries in the protein family file (keep the first occurrence)
+    protein_family = protein_family.drop_duplicates(subset='chembl_id')
+    
+    # Merge the protein family info with data, based on 'Target ChEMBL ID' from data and 'chembl_id' from protein_family
+    merged_data = data.merge(protein_family[['chembl_id', 'pref_name', 'protein_class_name', 'protein_class_description']],
+                             left_on='Target ChEMBL ID', right_on='chembl_id', how='left')
+    
+    # Drop the redundant 'chembl_id' column from the merged DataFrame
+    merged_data.drop(columns=['chembl_id'], inplace=True)
+    
+    return merged_data
+
+
+def process_directory(path: str,cleaner):
     """"
     Process the directory containing the files to be cleaned: for each file in the directory,
     apply the cleaning function 
@@ -68,9 +91,11 @@ def process_directory(path: str, cleaner):
             df = load_file(file_path,header=None)
             df.columns = header
         df = drop_columns(df)
+        df = add_protein_family(df, cleaner.args.path_proteinfamily)
         cleaned_dfs.append(cleaner.clean_data(df))
     cleaned_df = pd.concat(cleaned_dfs, ignore_index=True)    
     return cleaned_df
+
 
 def compentence(data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
     """Filter data based on the confidence score in the assays file
