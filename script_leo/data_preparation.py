@@ -484,6 +484,7 @@ def process_data_3(df):
     
     # Convert the dictionary to a DataFrame and add it to the existing data_report DataFrame
     new_row_df = pd.DataFrame([data_dict])
+    new_row = new_row.dropna(how='all')
     data_report = pd.concat([data_report, new_row_df], ignore_index=True)
     
   
@@ -491,14 +492,6 @@ def process_data_3(df):
     print('Dataset filtered correctly')
 
     return df_whole_dataset, df_whole_act_dataset, df_whole_ina_dataset, df_data_other_eq_inc, data_report
-
-
-
-### TO ADD
-######### Remove salts from smiles and check identical smiles
-######### Then, identify if there are identical molecules (based on the smiles without the salts)
-######## and keep only the molecule that has the smallest 'diff' value.
-######## After that, update df_whole_dataset, df_whole_act_dataset, df_whole_ina_dataset, df_data_other_eq_inc, data_report to ensure that there are not more duplicates.
 
 def remove_salts(smiles):
     """

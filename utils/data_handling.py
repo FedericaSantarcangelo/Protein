@@ -9,12 +9,17 @@ patterns = [
             r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
             r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi, e.g., A763_Y764
             r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi con trattino, e.g., D770-N771
+            r'\bd\d{1,4}-\d{1,4}\b',  # Mutazione singola minuscola, e.g., d770-771
             r'\b[A-Z]\d{1,4}\b',  # Mutazione singola, e.g., L747
 
             r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del/[A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del/L858R
             r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del, [A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del,L858R
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del',
+            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del, [A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di virgola, e.g., E746-A750del, L858R
 
             r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}insFHEA',  # Delezione tra due amminoacidi, e.g., A763_Y764insFHEA
+            r'\bD\d{1,4}_N\d{1,4}insNPG', #D770_N771insNPG 
+
 
             r'\b[A-Z]\d{1,4}/[A-Z]del\b',  # Mutazione doppia, e.g., L747S/T751del
             r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Mutazione d'intervallo, e.g., L747-T751del
@@ -22,13 +27,13 @@ patterns = [
             r'\bDel [A-Z]\d{1,4}/[A-Z]\d{1,4}\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., Del E746/A750
             r'\bdel \d{1,4}-\d{1,4}\b',  # Delezione con intervallo numerico, e.g., del 746-750
             r'\bDel\s*\d{1,4}\b',  # Delezione, e.g., Del19
+            r'\bdel\d{1,4}\b',  # Delezione, e.g., del19
             
             r'\bex\d{1,2}del\b',  # Delezione con notazione esone, e.g., ex19del
             r'\bexon\d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon19 deletion
-            r'\bexon \d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon19 deletion
+            r'\bexon \d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon 19 deletion
             
-            r'\b del \(\d{1,4} to \d{1,4}\)\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
-            r'\b \d{1,4} to \d{1,4}\s* deletion\b',  # Delezione con intervallo numerico tra parentesi, e.g., 746 to 750 deletion
+            r'\b\d{1,4} to \d{1,4}\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
 
             r'\bd(\d{1,4}-\d{1,4})\/([A-Z]\d{1,4}[A-Z])\b',  # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
 

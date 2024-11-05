@@ -108,11 +108,11 @@ class Cleaner():
         sty_pri = ast.literal_eval(self.args.sty_pri)
         src_pri = ast.literal_eval(self.args.src_pri)
 
-        duplicates = data.duplicated(subset='Molecule ChEMBL ID', keep=False)
+        duplicates = data.duplicated(subset=['Molecule ChEMBL ID','mutant'], keep=False)
         duplicate_data = data[duplicates]
         unique_data = data[~duplicates] 
 
-        g_dupl = duplicate_data.groupby('Molecule ChEMBL ID')
+        g_dupl = duplicate_data.groupby(['Molecule ChEMBL ID','mutant'])
         indexes = []
 
         for _,grouper in g_dupl:

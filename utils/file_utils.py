@@ -50,13 +50,10 @@ def add_protein_family(data, protein_file):
     Add the protein family information to the data based on 'Target ChEMBL ID'.
     :return: DataFrame with protein family columns added
     """
-    # Read the protein family file
     protein_family = pd.read_csv(protein_file)
     
-    # Ensure there are no duplicate chembl_id entries in the protein family file (keep the first occurrence)
     protein_family = protein_family.drop_duplicates(subset='chembl_id')
     
-    # Merge the protein family info with data, based on 'Target ChEMBL ID' from data and 'chembl_id' from protein_family
     merged_data = data.merge(protein_family[['chembl_id', 'pref_name', 'protein_class_name', 'protein_class_description']],
                              left_on='Target ChEMBL ID', right_on='chembl_id', how='left')
     

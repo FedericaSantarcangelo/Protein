@@ -29,7 +29,7 @@ def parser_args():
     parser = argparse.ArgumentParser(description = 'Data Cleaning')
     file_args(parser)
     data_cleaning_args(parser)
-    parser.add_argument('--path_db', type = str, default = '/home/luca/LAB/LAB_federica/chembl33_20240216',
+    parser.add_argument('--path_db', type = str, default = '/home/federica/LAB2/chembl1865/EGFR.csv',
                         help = 'Specify the path of the database')
     parser.add_argument('--model', type=str, choices=['classifier', 'regressor'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
@@ -68,7 +68,7 @@ def process_data(cleaner, args):
     else:
         df = load_file(args.path_db)
         df = drop_columns(df)
-        df = add_protein_family(df, args.path_proteinfamily)
+        #df = add_protein_family(df, args.path_proteinfamily)
         df = cleaner.clean_data(df)
     return df
 
