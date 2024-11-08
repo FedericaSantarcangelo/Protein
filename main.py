@@ -68,7 +68,7 @@ def process_data(cleaner, args):
     else:
         df = load_file(args.path_db)
         df = drop_columns(df)
-        #df = add_protein_family(df, args.path_proteinfamily)
+        df = add_protein_family(df, args.path_proteinfamily)
         df = cleaner.clean_data(df)
     return df
 

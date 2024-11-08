@@ -17,7 +17,7 @@ class Mutation():
         self.uniprot, self.mapping = load_file(self.args.path_uniprot), load_file(self.args.path_mapping)
         self.organism = load_file(self.args.path_organism)
 
-    def get_mutations(self, data: pd.DataFrame, flag='1'):
+    def get_mutations(self, data: pd.DataFrame, label ,flag='1', ):
         """
         Get mutations main function
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
@@ -26,7 +26,7 @@ class Mutation():
         knonw_mutations,all_mut = self.format_uniprot(merged_uniprot)
         no_mut,mut=self.split_data(data.copy())
         mutant = self.find_mutant(mut,all_mut)
-        mut, wild_type, mixed = self.format_output(no_mut,mutant,knonw_mutations, flag)
+        mut, wild_type, mixed = self.format_output(no_mut,mutant,knonw_mutations, flag,label)
         return mut, wild_type, mixed
     
     def split_data(self, data: pd.DataFrame):
@@ -134,7 +134,7 @@ class Mutation():
                         mutant.loc[index, 'shifted_mutation'] = '/'.join(shifted_mutations)
         return mutant
     
-    def format_output(self,no_mut,mut,known_mutations,flag):
+    def format_output(self,no_mut,mut,known_mutations,flag,label):
         """
         Formatting final output
         return: formatted dataframes
@@ -151,7 +151,7 @@ class Mutation():
                 if row['Target ChEMBL ID'] == key[1]:
                     accession_code = key[0]
                     mut.loc[index, 'Accession Code'] = accession_code
-                    break  # Stop searching once we find the Accession Code
+                    break 
 
         wild_type = mut[mut['mutant'] == 'wild type'].copy()
         no_mut.loc[:,'mutant'] = 'mixed'
@@ -159,7 +159,7 @@ class Mutation():
         wrong,mut = find_mixed(mut)
         no_mut = pd.concat([no_mut, wrong], ignore_index=True)   
         mut = population(mut); no_mut = population(no_mut); wild_type = population(wild_type)
-        save_other_files(no_mut, self.args.path_output ,'mixed', flag) 
-        mut = save_mutation_target(self.args, mut, flag) 
-        wild_type = save_mutation_target(self.args, wild_type ,flag, 'wild_type')
+        save_other_files(no_mut, self.args.path_output,'mixed', label, flag) 
+        mut = save_mutation_target(self.args, mut, label , flag ) 
+        wild_type = save_mutation_target(self.args, wild_type , label, flag, 'wild_type')
         return mut,wild_type,no_mut

@@ -5,41 +5,43 @@ import numpy as np
 from utils.file_utils import compentence
 
 #patterns for finding mutations in the assay description field
+
+
 patterns = [
-            r'\b[A-Z]\d{1,4}[A-Z]\b',  # Mutazione singola, e.g., L747S
-            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi, e.g., A763_Y764
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\b',  # Mutazione tra due amminoacidi con trattino, e.g., D770-N771
-            r'\bd\d{1,4}-\d{1,4}\b',  # Mutazione singola minuscola, e.g., d770-771
-            r'\b[A-Z]\d{1,4}\b',  # Mutazione singola, e.g., L747
+    r'\b[A-Z]\d{1,4}[A-Z]\b',                                 # Mutazione singola, e.g., L747S
+    r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\b',                         # Mutazione tra due amminoacidi, e.g., A763_Y764
+    r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\b',                         # Mutazione tra due amminoacidi con trattino, e.g., D770-N771
+    r'\bd\d{1,4}-\d{1,4}\b',                                  # Mutazione singola minuscola, e.g., d770-771
+    r'\b[A-Z]\d{1,4}\b',                                      # Mutazione singola, e.g., L747
 
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del/[A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del/L858R
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del, [A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., E746-A750del,L858R
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del',
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del, [A-Z]\d{1,4}[A-Z]\b',  # Delezione tra due amminoacidi con separatore di virgola, e.g., E746-A750del, L858R
+    r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del/[A-Z]\d{1,4}[A-Z]\b',    # Delezione tra due amminoacidi con barra, e.g., E746-A750del/L858R
+    r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del,?\s*[A-Z]\d{1,4}[A-Z]\b',# Delezione con barra o virgola, e.g., E746-A750del,L858R
 
-            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}insFHEA',  # Delezione tra due amminoacidi, e.g., A763_Y764insFHEA
-            r'\bD\d{1,4}_N\d{1,4}insNPG', #D770_N771insNPG 
+    r'\b[A-Z]\d{1,4}/[A-Z]del\b',                             # Mutazione doppia, e.g., L747S/T751del
+    r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',                      # Delezione semplice, e.g., E746-A750del
+    r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del,Sins\b',                 # Mutazione con inserzione, e.g., L747-T751del,Sins
+    
+    r'\([A-Z]\d{1,4}-[A-Z]\d{1,4}\s+ins\s+[A-Z]+\)',          # (D770-N771 ins NPG)
+    r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}ins\b',                      # Inserzione generica tra due amminoacidi, e.g., A763_Y764ins
+    r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins\b',                    # Mutazione di inserzione, e.g., D770-N771ins
+    r'[A-Z]\d{1,4}_[A-Z]\d{1,4}ins[A-Z]+',                    # D770_N771insNPG or A763_Y764insFHEA
+    r'\b[A-Z]\d{1,4}[-][A-Z]\d{1,4}\s*ins\s*[A-Z]+\b',
 
 
-            r'\b[A-Z]\d{1,4}/[A-Z]del\b',  # Mutazione doppia, e.g., L747S/T751del
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del\b',  # Mutazione d'intervallo, e.g., L747-T751del
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del,Sins\b',  # Mutazione d'intervallo con inserzione, e.g., L747-T751del,Sins
-            r'\bDel [A-Z]\d{1,4}/[A-Z]\d{1,4}\b',  # Delezione tra due amminoacidi con separatore di barra, e.g., Del E746/A750
-            r'\bdel \d{1,4}-\d{1,4}\b',  # Delezione con intervallo numerico, e.g., del 746-750
-            r'\bDel\s*\d{1,4}\b',  # Delezione, e.g., Del19
-            r'\bdel\d{1,4}\b',  # Delezione, e.g., del19
-            
-            r'\bex\d{1,2}del\b',  # Delezione con notazione esone, e.g., ex19del
-            r'\bexon\d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon19 deletion
-            r'\bexon \d{1,2} deletion\b',  # Delezione con notazione esone, e.g., exon 19 deletion
-            
-            r'\b\d{1,4} to \d{1,4}\b',  # Delezione con intervallo numerico tra parentesi, e.g., del (746 to 750)
+    r'\bDel\s*\d{1,4}\b',                                     # Delezione, e.g., Del19
+    r'\bdel\d{1,4}\b',                                        # Delezione, e.g., del19
 
-            r'\bd(\d{1,4}-\d{1,4})\/([A-Z]\d{1,4}[A-Z])\b',  # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
+    r'\bex\d{1,2}del\b',                                      # Delezione con notazione esone, e.g., ex19del
+    r'\bexon\s*\d{1,2}\s*deletion\b',                         # Delezione con notazione esone, e.g., exon 19 deletion
+ 
+    r'\bd(\d{1,4}-\d{1,4})/[A-Z]\d{1,4}[A-Z]\b',               # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
+    r'[A-Z]\d{1,4}[A-Z]/del\s*\(\d{1,4}\s*to\s*\d{1,4}\s*residues\)',
+    r'\bdel\s*\(\s*\d{1,4}\s*to\s*\d{1,4}\s*(?:residues?)?\s*\)',
 
-            r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins\b',  # Mutazione di inserzione, e.g., D770-N771ins
-            r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\s*ins\b',  # Inserzione tra due amminoacidi, e.g., A763_Y764ins
-        ]
+    r'\(([A-Z]\d{1,4})-[A-Z]\d{1,4}del(?:,\s*[A-Z]\d{1,4}[A-Z]?)?\)',  # (L747-T751del) or (L747-E749del, A750P)
+    r'\b([A-Z]\d{1,4}-[A-Z]\d{1,4})\s*ins\b',                          # D770-N771 ins
+    r'\(([A-Z]\d{1,4})-[A-Z]\d{1,4}del(?:,\s*(Sins))?\)'  # (L747-T751del,Sins) or (L747-E749del, A750P)
+]
 
 
 def data_perc_f(thr_perc, data: pd.DataFrame) -> pd.DataFrame:

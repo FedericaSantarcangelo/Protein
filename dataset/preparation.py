@@ -24,37 +24,42 @@ class Cleaner():
         :return: the cleaned data
         """
         data = self.remove_row(data)
-        data = self.filter_data(data)
-        data = remove_salts(data, self.assay) 
-        first , second, third = self.selct_quality(data)
-        quality_data = [(first,1),(second,2),(third,3)]
-        all_mutations=[]
-        all_mixed = []
-        if self.args.mutation:
-            mutation_processor = Mutation(self.args)
-            for quality_data_item,quality_level in quality_data:
-                mut,wild_type,mixed = mutation_processor.get_mutations(quality_data_item.copy(),str(quality_level)) 
-                combined_mut = pd.concat([mut,wild_type])
-                combined_mut['Quality'] = str(quality_level)
-                all_mutations.append(combined_mut)
-                all_mixed.append(mixed)
-                if not combined_mut.empty:
-                    data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(combined_mut, quality_level)
-                else:
-                    data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(mixed, quality_level)
-                filenames = {
-                    'whole_dataset_out.csv': whole_dataset,
-                    'whole_act_out.csv': whole_act,
-                    'whole_inact_out.csv': whole_inact,
-                    'inc_data_out.csv': inc_data,
-                    'data_report_out.csv': data_report,
-                }
-                save_data_report(self.args.path_output, filenames)
-        if all_mutations and len(all_mutations) > 100:
-            return pd.concat(all_mutations)
-        else:
-          #  all_mixed.append(all_mutations)
-            return pd.concat(all_mixed)
+        df_act , df_perc = self.filter_data(data)
+        def process_df(data,label):
+            data = remove_salts(data, self.assay)
+            first , second, third = self.selct_quality(data)
+            quality_data = [(first,1),(second,2),(third,3)]
+            all_mutations=[]
+            all_mixed = []
+            if self.args.mutation:
+                mutation_processor = Mutation(self.args)
+                for quality_data_item,quality_level in quality_data:
+                    mut,wild_type,mixed = mutation_processor.get_mutations(quality_data_item.copy(), label, str(quality_level)) 
+                    combined_mut = pd.concat([mut,wild_type])
+                    combined_mut['Quality'] = str(quality_level)
+                    all_mutations.append(combined_mut)
+                    all_mixed.append(mixed)
+                    if not combined_mut.empty:
+                        data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(combined_mut, quality_level)
+                    else:
+                        data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(mixed, quality_level)
+                    filenames = {
+                        'whole_dataset_out.csv': whole_dataset,
+                        'whole_act_out.csv': whole_act,
+                        'whole_inact_out.csv': whole_inact,
+                        'inc_data_out.csv': inc_data,
+                        'data_report_out.csv': data_report,
+                    }
+                    save_data_report(self.args.path_output, label, filenames)
+            if all_mutations and len(all_mutations) > 100:
+                return pd.concat(all_mutations)
+            else:
+            #all_mixed.append(all_mutations)
+                return pd.concat(all_mixed)
+        act = process_df(df_act, 'act')
+        perc = process_df(df_perc, 'perc')
+
+        return pd.concat([act, perc])
 
     def remove_row(self,data: pd.DataFrame):
         """
@@ -92,8 +97,13 @@ class Cleaner():
             data_perc = data_perc[data_perc['Assay Description'].str.contains(pattern, regex=True, na=False)]
             data_perc = data_perc_f(self.args.thr_perc , data_perc)
         
-        df= pd.concat([data_log, data_act, data_perc])
-        return df
+        df_act= pd.concat([data_log, data_act])
+        
+        if not data_perc.empty:
+            df_act_ids = df_act['Molecule ChEMBL ID'].unique()  # Identificatori unici di df_act
+            data_perc = data_perc[~data_perc['Molecule ChEMBL ID'].isin(df_act_ids)]  # Filtraggio di data_perc
+
+        return df_act, data_perc
 
     def remove_duplicate(self, data: pd.DataFrame) -> pd.DataFrame: 
         """ 

@@ -40,7 +40,7 @@ def marge_data(path: str, organism: pd.DataFrame, mapping: pd.DataFrame, uniprot
     merge.to_csv(path+'merged.csv', index=False)
     return merge
 
-def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation_target',id_column: str='Target ChEMBL ID') -> None:
+def save_mutation_target(args, data: pd.DataFrame, label, flag, f_path: str = 'mutation_target',id_column: str='Target ChEMBL ID') -> None:
     """
     Save the mutation target
     return: the updated dataframe without duplicates
@@ -52,7 +52,7 @@ def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation
         full_path = os.path.join(args.path_output + f_path)
         if not os.path.exists(full_path):
             os.makedirs(full_path, exist_ok=True)
-        full_path = os.path.join(full_path +f'/{f_path}'+f'_{flag}')
+        full_path = os.path.join(full_path +f'/{f_path}'+f'_{flag}'+ f'_{label}')
         if not os.path.exists(full_path):
             os.makedirs(full_path, exist_ok=True)
         cleaner = Cleaner(args)
@@ -70,7 +70,7 @@ def save_mutation_target(args, data: pd.DataFrame, flag, f_path: str = 'mutation
                 except Exception as e:
                     print(f"Error during the reading of the file {output_path}: {e}")
             try:
-                group.to_csv(output_path, index=False) #save or upodate the file
+                group.to_csv(output_path, index=False)
             except Exception as e:
                 print(f"Error during the saving of the file {output_path}: {e}")
     except ValueError as e:

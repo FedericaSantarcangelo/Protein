@@ -44,7 +44,7 @@ def file_args(parser: ArgumentParser) -> None:
     parser.add_argument('--path_output', type = str, default = '/home/luca/LAB/LAB_federica/', 
                         help = 'Specify the path where to save the output file')
     parser.add_argument('--path_assay',type=str, default='/home/federica/LAB2/assays.csv', help='Specify the name of the assay file with confidence informations')
-    parser.add_argument('--path_proteinfamily', type=str, default='/home/federica/LAB2/protein_class.csv', 
+    parser.add_argument('--path_proteinfamily', type=str, default='/home/federica/LAB2/family_protein_with_formatted.csv', 
                         help='Specify the path of the protein family classification file')
     # Add arguments for mutational analysis
     parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')

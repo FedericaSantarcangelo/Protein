@@ -50,14 +50,9 @@ def add_protein_family(data, protein_file):
     Add the protein family information to the data based on 'Target ChEMBL ID'.
     :return: DataFrame with protein family columns added
     """
-    protein_family = pd.read_csv(protein_file)
-    
-    protein_family = protein_family.drop_duplicates(subset='chembl_id')
-    
-    merged_data = data.merge(protein_family[['chembl_id', 'pref_name', 'protein_class_name', 'protein_class_description']],
+    protein_family = pd.read_csv(protein_file)    
+    merged_data = data.merge(protein_family[['chembl_id', 'family', 'accession', 'protein_class_desc']],
                              left_on='Target ChEMBL ID', right_on='chembl_id', how='left')
-    
-    # Drop the redundant 'chembl_id' column from the merged DataFrame
     merged_data.drop(columns=['chembl_id'], inplace=True)
     
     return merged_data
@@ -115,7 +110,7 @@ def split_second(second: pd.DataFrame):
     df2 = df2[(df2['Assay Type'] == 'B') | (df2['Assay Type'] == 'F') & (df2['BAO Label'] == 'cell-based format')].copy()
     return df1, df2
 
-def save_other_files(file: pd.DataFrame, output_path: str,name: str, flag: str = '1'):
+def save_other_files(file: pd.DataFrame, output_path: str,name: str, label ,flag: str = '1'):
     """
     Save the file different from mutation such mixed 
     """
@@ -123,7 +118,7 @@ def save_other_files(file: pd.DataFrame, output_path: str,name: str, flag: str =
     if not os.path.exists(full_path):
         os.makedirs(full_path)
 
-    full_path = os.path.join(full_path+ f'/{name}' +f'_{flag}')  
+    full_path = os.path.join(full_path+ f'/{name}' + f'_{label}' +f'_{flag}')  
     if not os.path.exists(full_path):
         os.makedirs(full_path)
 
@@ -131,7 +126,7 @@ def save_other_files(file: pd.DataFrame, output_path: str,name: str, flag: str =
         try:
             group = file.groupby('Target ChEMBL ID')
             for name, df in group:
-                output_file = os.path.join(full_path, f"{name}_{flag}.csv")
+                output_file = os.path.join(full_path, f"{name}_{label}_{flag}.csv")
                 if os.path.exists(output_file):
                     try:
                         existing_data = pd.read_csv(output_file)
@@ -145,12 +140,12 @@ def save_other_files(file: pd.DataFrame, output_path: str,name: str, flag: str =
         except Exception as e:
             print(f"Error during the saving of the file {full_path}: {e}")
 
-def save_data_report(base_path: str, data_dict: dict):
+def save_data_report(base_path: str, label ,data_dict: dict):
     """
     Save the data in the report folder or in the filtered folder if the file is not a report
     """
-    data_path = os.path.join(base_path, 'filtered')
-    report_path = os.path.join(base_path, 'report')
+    data_path = os.path.join(base_path, f'filtered_{label}')
+    report_path = os.path.join(base_path, f'report_{label}')
     if not os.path.exists(data_path):
         os.makedirs(data_path)
     if not os.path.exists(report_path):
