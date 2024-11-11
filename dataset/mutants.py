@@ -17,7 +17,7 @@ class Mutation():
         self.uniprot, self.mapping = load_file(self.args.path_uniprot), load_file(self.args.path_mapping)
         self.organism = load_file(self.args.path_organism)
 
-    def get_mutations(self, data: pd.DataFrame, label ,flag='1', ):
+    def get_mutations(self, data: pd.DataFrame, label ,flag='1'):
         """
         Get mutations main function
         :return: final dataframe with mutations and no mutations, mutation_report dataframe with mutations found
