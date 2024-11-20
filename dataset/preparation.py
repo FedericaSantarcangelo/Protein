@@ -40,9 +40,9 @@ class Cleaner():
                     all_mutations.append(combined_mut)
                     all_mixed.append(mixed)
                     if not combined_mut.empty:
-                        data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(combined_mut, quality_level)
+                        data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(combined_mut, mixed)
                     else:
-                        data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(mixed, quality_level)
+                        data_report, whole_dataset, whole_act,whole_inact, inc_data = self.active_inactive(combined_mut, mixed)
                     filenames = {
                         'whole_dataset_out.csv': whole_dataset,
                         'whole_act_out.csv': whole_act,
@@ -178,130 +178,115 @@ class Cleaner():
         second,third = split_second(other)
         return data,second,third
 
-    def active_inactive(self, data: pd.DataFrame,flag):
+    def active_inactive(self, data: pd.DataFrame,mixed: pd.DataFrame):
         """ 
         Filter the data based on active and inactive values
         :return: the filtered data
         """
-        # Filter the data based on the 'Standard Relation' column
         s_type = self.args.standard_type_act[0].split(',')
         df_act = data[data['Standard Type'].isin(s_type)]
 
         p_type = self.args.standard_type_perc[0].split(',')
         df_perc = data[data['Standard Type'].isin(p_type)]
-        
+
         if 'Activity' not in df_perc['Standard Type'].unique():
             df_perc_act = df_perc[df_perc['Standard Value'] > self.args.thr_perc]
             df_perc_inact = df_perc[df_perc['Standard Value'] < self.args.thr_perc]
         else:
-            df_perc_act = df_perc[df_perc['Standard Type'] != 'Activity']
-            df_perc_act = df_perc_act[df_perc_act['Standard Value'] > self.args.thr_perc]
-            df_perc_inact = df_perc[df_perc['Standard Type'] != 'Activity']
-            df_perc_inact = df_perc_inact[df_perc_inact['Standard Value'] < self.args.thr_perc]
-        
-            df_perc_act_i = df_perc[df_perc['Standard Type'] == 'Activity']
-            df_perc_act_i = df_perc_act_i[df_perc_act_i['Standard Value'] < self.args.thr_perc]
-            df_perc_inact_i = df_perc[df_perc['Standard Type'] == 'Activity']
-            df_perc_inact_i = df_perc_inact_i[df_perc_inact_i['Standard Value'] > self.args.thr_perc]
+            df_perc_act = df_perc[(df_perc['Standard Type'] != 'Activity') & (df_perc['Standard Value'] > self.args.thr_perc)]
+            df_perc_inact = df_perc[(df_perc['Standard Type'] != 'Activity') & (df_perc['Standard Value'] < self.args.thr_perc)]
 
-            df_perc_act = pd.concat([df_perc_act, df_perc_act_i], ignore_index=True)
-            df_perc_inact = pd.concat([df_perc_inact, df_perc_inact_i], ignore_index=True)
+            df_perc_act_activity = df_perc[(df_perc['Standard Type'] == 'Activity') & (df_perc['Standard Value'] < self.args.thr_perc)]
+            df_perc_inact_activity = df_perc[(df_perc['Standard Type'] == 'Activity') & (df_perc['Standard Value'] > self.args.thr_perc)]
+
+            df_perc_act = pd.concat([df_perc_act, df_perc_act_activity], ignore_index=True)
+            df_perc_inact = pd.concat([df_perc_inact, df_perc_inact_activity], ignore_index=True)
 
         df_perc_rev_inact = df_perc_inact.copy()
         df_perc_rev_inact['Class'] = 0
         df_perc_rev_act = df_perc_act.copy()
         df_perc_rev_act['Class'] = 1
 
-        perc_rev_act_c = df_perc_act['Standard Value'].count()
-        perc_rev_inact_c = df_perc_inact['Standard Value'].count()
-
-        perc_rev_act_min = df_perc_act['Standard Value'].min()
-        perc_rev_act_max = df_perc_act['Standard Value'].max()
-
-        perc_rev_inact_min = df_perc_inact['Standard Value'].min()
-        perc_rev_inact_max = df_perc_inact['Standard Value'].max()
-
+        #########perc finished##########
+##attivi
         df_act_act = df_act[df_act['Standard Value'] <= self.args.thr_act]
         df_act_rev_act = df_act_act.copy()
         if not df_act_rev_act.empty:
             df_act_rev_act.loc[:, 'Class'] = 1
-        
+#inattivi
         df_act_inact = df_act[df_act['Standard Value'] >= self.args.thr_act*10]
         df_act_rev_inact = df_act_inact.copy()
         if not df_act_rev_inact.empty:
             df_act_rev_inact.loc[:,'Class'] = 0
-
+#incerti
         df_act_inc = df_act.loc[(df_act['Standard Value'] > self.args.thr_act) & (df_act['Standard Value'] < self.args.thr_act * 10)]
         df_act_rev_inc = df_act_inc.copy()
         if not df_act_rev_inc.empty:
             df_act_rev_inc.loc[:,'Class'] = 2
 
-        act_rev_act_c = df_act_rev_act['Standard Value'].count()
-        act_rev_inact_c = df_act_rev_inact['Standard Value'].count()
+        df_whole = pd.concat([df_act_rev_act, df_act_rev_inact, df_act_rev_inc, df_perc_rev_act, df_perc_rev_inact], ignore_index=True)
+        df_whole_active = pd.concat([df_act_rev_act, df_perc_rev_act], ignore_index=True)
+        df_whole_inactive = pd.concat([df_act_rev_inact, df_perc_rev_inact], ignore_index=True)
 
-        act_rev_act_min = df_act_rev_act['Standard Value'].min()
-        act_rev_act_max = df_act_rev_act['Standard Value'].max()
+        
+        data_report = pd.DataFrame(columns=['Target Chembl ID', 'Target Name', 'Accession Code', 'Mutant',
+                                    'Number of Molecules', 'Ratio active/inactive', 'Total_std_type', 'Total_inhi',
+                                    'data_std_active', 'data_std_inactive', 'data_std_inc', 'data_inhi_active', 
+                                    'data_inhi_inactive', 'data_std_active_min', 'data_std_inactive_min', 
+                                    'data_std_active_max', 'data_std_inactive_max', 'data_std_inc_min', 
+                                    'data_std_inc_max', 'data_inhi_active_min', 'data_inhi_inactive_min', 
+                                    'data_inhi_active_max', 'data_inhi_inactive_max', 'Quality'])
 
-        act_rev_inact_min = df_act_rev_inact['Standard Value'].min()
-        act_rev_inact_max = df_act_rev_inact['Standard Value'].max()
+        target_mutant_groups = df_whole.groupby(['Target ChEMBL ID', 'mutant'])
+        for (target_id,mutant), g in target_mutant_groups:
+            num_std_active = len(g[(g['Standard Type'].isin(s_type)) & (g['Class'] == 1)])
+            num_std_inc= len(g[g['Class'] == 2])
+            num_std_inactive = len(g[(g['Standard Type'].isin(s_type)) & (g['Class'] == 0)])
 
-        df_whole = pd.concat([df_act_rev_act, df_act_rev_inact, df_act_rev_inc, df_perc_rev_act, df_perc_rev_inact])
-        df_whole_inact = pd.concat([df_act_rev_inact, df_perc_rev_inact])
-        df_whole_act = pd.concat([df_act_rev_act, df_perc_rev_act])
-        if not df_whole_inact.empty:
-            ratio_act_ina = len(df_act_rev_act) / len(df_whole_inact)
-        else:
-            ratio_act_ina = len(df_act_rev_act) / 1
+            num_perc_active = len(g[(g['Standard Type'].isin(p_type)) & (g['Class'] == 1)])
+            num_perc_inactive = len(g[(g['Standard Type'].isin(p_type)) & (g['Class'] == 0)])
 
-        total_df_records = len(df_whole)
-        total_std_types = len(df_whole_act)
-        total_inhibition = len(df_perc_rev_inact)
+            ratio_active_inactive = 'inf'
 
-        data_dict = {
-            'ratio active/inactive':ratio_act_ina,
-            'total_df_records':total_df_records,
-            'total_std_types':total_std_types,
-            'total_inhibition':total_inhibition,
-            'data_std_active':act_rev_act_c,
-            'data_std_inactive':act_rev_inact_c,
-            'data_inhi_act':perc_rev_act_c,
-            'data_inhi_ina':perc_rev_inact_c,
-            'data_std_active_min':act_rev_act_min,
-            'data_std_active_max':act_rev_act_max,
-            'data_std_inactive_min':act_rev_inact_min,
-            'data_std_inactive_max':act_rev_inact_max,
-            'data_inhi_act_min':perc_rev_act_min,
-            'data_inhi_act_max':perc_rev_act_max,
-            'data_inhi_ina_min':perc_rev_inact_min,
-            'data_inhi_ina_max':perc_rev_inact_max,
-            'quality': flag
-    }
+            if num_std_inactive !=0:
+                ratio_active_inactive = num_std_active / num_std_inactive
+            if num_perc_inactive !=0:
+                ratio_active_inactive = num_perc_active / num_perc_inactive
+            
 
-        data_report = pd.DataFrame(columns=[
-                                    'ratio active/inactive',
-                                    'total_df_records',
-                                    'total_std_types',
-                                    'total_inhibition',
-                                    'data_std_active',
-                                    'data_std_inactive',
-                                    'data_inhi_act',
-                                    'data_inhi_ina',
-                                    'data_std_active_min',
-                                    'data_std_active_max',
-                                    'data_std_inactive_min',
-                                    'data_std_inactive_max',
-                                    'data_inhi_act_min',
-                                    'data_inhi_act_max',
-                                    'data_inhi_ina_min',
-                                    'data_inhi_ina_max',
-                                    'quality'])
+            data_dict = {
+                'Target Chembl ID': target_id,
+                'Target Name': g['Target Name'].iloc[0],
+                'Accession Code': g['Accession Code'].iloc[0],
+                'Mutant': mutant,
+                'Number of Molecules': len(g),
+                'Ratio active/inactive': ratio_active_inactive,
+                'Total_std_type': len(g[g['Standard Type'].isin(s_type)]),
+                'Total_inhi': len(g[g['Standard Type'].isin(p_type)]),
+                'data_std_active': num_std_active,
+                'data_std_inactive': num_std_inactive,
+                'data_std_inc': num_std_inc,
+                'data_inhi_active': num_perc_active,
+                'data_inhi_inactive': num_perc_inactive,
 
-        for key,row in data_dict.items():
-            if pd.isna(row):
-                data_dict[key] = 0
+                'data_std_active_min': g[(g['Standard Type'].isin(s_type)) & (g['Class'] == 1)]['Standard Value'].min(),
+                'data_std_inactive_min': g[(g['Standard Type'].isin(s_type)) & (g['Class'] == 0)]['Standard Value'].min(),
+                'data_std_inc_min': g[(g['Standard Type'].isin(s_type)) & (g['Class'] == 2)]['Standard Value'].min(),
+                'data_std_active_max': g[(g['Standard Type'].isin(s_type)) & (g['Class'] == 1)]['Standard Value'].max(),
+                'data_std_inactive_max': g[(g['Standard Type'].isin(s_type)) & (g['Class'] == 0)]['Standard Value'].max(),
+                'data_std_inc_max': g[(g['Standard Type'].isin(s_type)) & (g['Class'] == 2)]['Standard Value'].max(),
+                'data_inhi_active_min': g[(g['Standard Type'].isin(p_type)) & (g['Class'] == 1)]['Standard Value'].min(),
+                'data_inhi_inactive_min': g[(g['Standard Type'].isin(p_type)) & (g['Class'] == 0)]['Standard Value'].min(),
+                'data_inhi_active_max': g[(g['Standard Type'].isin(p_type)) & (g['Class'] == 1)]['Standard Value'].max(),
+                'data_inhi_inactive_max': g[(g['Standard Type'].isin(p_type)) & (g['Class'] == 0)]['Standard Value'].max(),
+                'num_mixed': len(mixed[mixed['Target ChEMBL ID'] == target_id]),
+                'Quality': g['Quality'].iloc[0]
+            }
+            new_row_df = pd.DataFrame([data_dict])
+            data_report = pd.concat([data_report, new_row_df], ignore_index=True)
 
-        new_row=pd.DataFrame([data_dict])
-        data_report = pd.concat([data_report, new_row], ignore_index=True)
-        return data_report, df_whole, df_whole_act, df_whole_inact, df_act_rev_inc
+        data_report.sort_values(by='Target Chembl ID', inplace=True)
+
+        return  data_report, df_whole, df_whole_active, df_whole_inactive, df_act_rev_inc
+
     
- 

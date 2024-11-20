@@ -121,16 +121,17 @@ class Mutation():
                     known_flags.append(str(is_known))
                 if mutations_found:
                     if len(mutations_found) > 3: 
-                        grouped_mutations = ["/".join(mutations_found[i:i+2]) for i in range(0, len(mutations_found), 2)]
-                        grouped_shifted = ["/".join(shifted_mutations[i:i+2]) for i in range(0, len(shifted_mutations), 2)]
-                        grouped_known = ["/".join(known_flags[i:i+2]) for i in range(0, len(known_flags), 2)]
+                        grouped_mutations = [";".join(mutations_found[i:i+2]) for i in range(0, len(mutations_found), 2)]
+                        grouped_shifted = [";".join(shifted_mutations[i:i+2]) for i in range(0, len(shifted_mutations), 2)]
+                        grouped_known = [";".join(known_flags[i:i+2]) for i in range(0, len(known_flags), 2)]
                         
-                        mutant.loc[index, 'mutant_known'] = ';'.join(grouped_known)
                         mutant.loc[index, 'mutant'] = ';'.join(grouped_mutations)
+                        mutant.loc[index, 'mutant_known'] = ';'.join(grouped_known)
                         mutant.loc[index, 'shifted_mutation'] = ';'.join(grouped_shifted)
                     else:
-                        mutant.loc[index, 'mutant_known'] = '/'.join(known_flags)
+                        mutations_found = list(set(mutations_found))
                         mutant.loc[index, 'mutant'] = '/'.join(mutations_found)
+                        mutant.loc[index, 'mutant_known'] = '/'.join(known_flags)
                         mutant.loc[index, 'shifted_mutation'] = '/'.join(shifted_mutations)
         return mutant
     

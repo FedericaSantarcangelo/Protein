@@ -8,11 +8,13 @@ from utils.file_utils import compentence
 
 
 patterns = [
-    r'\b[A-Z]\d{1,4}[A-Z]\b',                                 # Mutazione singola, e.g., L747S
+    r'\bmutant\s*[A-Z]\d{1,4}\b',  
+    r'\b[A-Z]\d{1,4}\s*mutant\b',
+    r'\b[A-Z]\d{2,4}[A-Z]\b',                                 # Mutazione singola, e.g., L747S
     r'\b[A-Z]\d{1,4}_[A-Z]\d{1,4}\b',                         # Mutazione tra due amminoacidi, e.g., A763_Y764
-    r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\b',                         # Mutazione tra due amminoacidi con trattino, e.g., D770-N771
+    r'\b[A-Z]\d{2,4}-[A-Z]\d{2,4}\b',                         # Mutazione tra due amminoacidi con trattino, e.g., D770-N771
     r'\bd\d{1,4}-\d{1,4}\b',                                  # Mutazione singola minuscola, e.g., d770-771
-    r'\b[A-Z]\d{1,4}\b',                                      # Mutazione singola, e.g., L747
+    r'\b[A-Z][A-Z]\d{1,4}[A-Z]\s*mutant\b',                         # Mutazione singola con doppia lettera, e.g., LS747mutant
 
     r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del/[A-Z]\d{1,4}[A-Z]\b',    # Delezione tra due amminoacidi con barra, e.g., E746-A750del/L858R
     r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}del,?\s*[A-Z]\d{1,4}[A-Z]\b',# Delezione con barra o virgola, e.g., E746-A750del,L858R
@@ -26,6 +28,7 @@ patterns = [
     r'\b[A-Z]\d{1,4}-[A-Z]\d{1,4}\s*ins\b',                    # Mutazione di inserzione, e.g., D770-N771ins
     r'[A-Z]\d{1,4}_[A-Z]\d{1,4}ins[A-Z]+',                    # D770_N771insNPG or A763_Y764insFHEA
     r'\b[A-Z]\d{1,4}[-][A-Z]\d{1,4}\s*ins\s*[A-Z]+\b',
+    r'\b[A-Z]\d{1,4}ins' ,                                                     # T1151ins                         
 
 
     r'\bDel\s*\d{1,4}\b',                                     # Delezione, e.g., Del19
@@ -37,6 +40,23 @@ patterns = [
     r'\bd(\d{1,4}-\d{1,4})/[A-Z]\d{1,4}[A-Z]\b',               # Delezione con intervallo numerico e mutazione, e.g., d746-750/L858R
     r'[A-Z]\d{1,4}[A-Z]/del\s*\(\d{1,4}\s*to\s*\d{1,4}\s*residues\)',
     r'\bdel\s*\(\s*\d{1,4}\s*to\s*\d{1,4}\s*(?:residues?)?\s*\)',
+    r'\bdel \s*\d{1,4}-\d{1,4}\b',                              # Delezione con trattino, e.g., del 746-750
+    r'FLT3[-\s]?ITD',                                           # FLT3
+    r'\b\(\d{1,4}\s*to\s*\d{1,4}\s*residues\)',                 # (747 to 750 residues)
+    r'\b\d{1,4}\s*to\s*\d{1,4}\s*deletion/[A-Z]\d{1,4}[A-Z]\b', # 747 to 750 deletion/L858R
+    #casi specifici
+    r'Glu355Gln',
+    r'Thr354Asn',
+    r'Cys481S',
+    r'Ile464His',
+    r'Ile414Met'
+    r'Phe467Met'
+    r'V600E',
+    r'Val297Leu',
+    r'JAK2V617F',
+    r'Val285Cys',
+    r'Cys188Ala',
+    r'deletion mutant',
 
     r'\(([A-Z]\d{1,4})-[A-Z]\d{1,4}del(?:,\s*[A-Z]\d{1,4}[A-Z]?)?\)',  # (L747-T751del) or (L747-E749del, A750P)
     r'\b([A-Z]\d{1,4}-[A-Z]\d{1,4})\s*ins\b',                          # D770-N771 ins
@@ -109,3 +129,5 @@ def remove_salts( data: pd.DataFrame, assay) -> pd.DataFrame:
     data['Smiles'] = cleaned_smiles
     data = compentence(data, assay)
     return data
+
+        

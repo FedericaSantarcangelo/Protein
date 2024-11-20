@@ -130,7 +130,7 @@ def save_other_files(file: pd.DataFrame, output_path: str,name: str, label ,flag
                 if os.path.exists(output_file):
                     try:
                         existing_data = pd.read_csv(output_file)
-                        df = pd.concat([existing_data, df], ignore_index=True).drop_duplicates()
+                        df = pd.concat([existing_data, df], ignore_index=True)
                     except Exception as e:
                         print(f"Error during the reading of the file {output_file}: {e}")
                 try:
@@ -160,12 +160,10 @@ def save_data_report(base_path: str, label ,data_dict: dict):
         if os.path.exists(full_path):
             try:
                 existing_data = pd.read_csv(full_path, low_memory=False)
-                df = pd.concat([existing_data, df], ignore_index=True).drop_duplicates()
+                df = pd.concat([existing_data, df], ignore_index=True)
             except Exception as e:
                 print(f"Error during the reading of the file {full_path}: {e}")
         try:
             df.to_csv(full_path, index=False, encoding='utf-8')
         except Exception as e:
             print(f"Errore durante il salvataggio del file {full_path}: {e}")
-
-
