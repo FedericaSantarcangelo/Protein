@@ -12,7 +12,6 @@ def get_parser() -> ArgumentParser:
     parser = ArgumentParser()
     data_cleaning_args(parser)
     return parser
-
 class Cleaner():
     def __init__(self,args: Namespace):
         self.args = args
@@ -26,7 +25,7 @@ class Cleaner():
         data = self.remove_row(data)
         df_act , df_perc = self.filter_data(data)
         def process_df(data,label):
-            data = remove_salts(data, self.assay)
+            data = remove_salts(data, self.assay, self.args.standard_type_act)
             first , second, third = self.selct_quality(data)
             quality_data = [(first,1),(second,2),(third,3)]
             all_mutations=[]
@@ -54,7 +53,6 @@ class Cleaner():
             if all_mutations and len(all_mutations) > 100:
                 return pd.concat(all_mutations)
             else:
-            #all_mixed.append(all_mutations)
                 return pd.concat(all_mixed)
         act = process_df(df_act, 'act')
         perc = process_df(df_perc, 'perc')
@@ -82,7 +80,7 @@ class Cleaner():
         if self.args.standard_type_log != 'None':
             l_type = self.args.standard_type_log[0].split(',')
             data_log = data[data['Standard Type'].isin(l_type)]
-            data_log = data_log_f(self.args.standard_type_log ,data_log)
+            data_log = data_log_f(l_type ,data_log)
 
         if self.args.standard_type_act != 'None':
             s_type = self.args.standard_type_act[0].split(',')
@@ -100,21 +98,21 @@ class Cleaner():
         df_act= pd.concat([data_log, data_act])
         
         if not data_perc.empty:
-            df_act_ids = df_act['Molecule ChEMBL ID'].unique()  # Identificatori unici di df_act
-            data_perc = data_perc[~data_perc['Molecule ChEMBL ID'].isin(df_act_ids)]  # Filtraggio di data_perc
+            df_act_ids = df_act['Molecule ChEMBL ID'].unique()
+            data_perc = data_perc[~data_perc['Molecule ChEMBL ID'].isin(df_act_ids)]
 
         return df_act, data_perc
 
     def remove_duplicate(self, data: pd.DataFrame) -> pd.DataFrame: 
         """ 
-        Remove duplicate appling a priority to the data
+        Remove duplicate applying a priority to the data
         :return: the filtered data
         """            
         rel_pri = ast.literal_eval(self.args.rel_pri)
         for key in list(rel_pri.keys()):
             new_key = f"'{key}'"
             rel_pri[new_key] = rel_pri.pop(key)
-            
+        
         sty_pri = ast.literal_eval(self.args.sty_pri)
         src_pri = ast.literal_eval(self.args.src_pri)
 
@@ -125,37 +123,43 @@ class Cleaner():
         g_dupl = duplicate_data.groupby(['Molecule ChEMBL ID','mutant'])
         indexes = []
 
-        for _,grouper in g_dupl:
+        for _, grouper in g_dupl:
             std_type_count = grouper['Standard Type'].value_counts()
             dominant = std_type_count.idxmax()
 
             grouper = grouper[grouper['Standard Type'] == dominant]
 
             if dominant:
-                grouper.loc[:,'Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
-                grouper.loc[:,'Source Description'] = grouper['Source Description'].map(src_pri)
+                grouper.loc[:, 'Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
+                grouper.loc[:, 'Source Description'] = grouper['Source Description'].map(src_pri)
                 grouper = grouper.sort_values(by=['Standard Relation', 'Source Description'], ascending=[True, True])
             else:
-                grouper.loc[:,'Standard Type'] = grouper['Standard Type'].map(sty_pri)
-                grouper.loc[:,'Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
-                grouper.loc[:,'Source Description'] = grouper['Source Description'].map(src_pri)
+                grouper.loc[:, 'Standard Type'] = grouper['Standard Type'].map(sty_pri)
+                grouper.loc[:, 'Standard Relation'] = grouper['Standard Relation'].map(rel_pri)
+                grouper.loc[:, 'Source Description'] = grouper['Source Description'].map(src_pri)
                 grouper = grouper.sort_values(by=['Standard Type', 'Standard Relation', 'Source Description'], ascending=[True, True, True])
 
             g_docs = grouper.groupby('Document ChEMBL ID')
             max_group = None
-            max_len=0
-            for _,g in g_docs:
+            max_len = 0
+            for _, g in g_docs:
                 if len(g) > max_len:
                     max_len = len(g)
                     max_group = g
             if max_group is not None:
-                min_val = max_group["Standard Value"].idxmin()
-                indexes.append(min_val)
-            
+            # Calcola la mediana esclusi gli estremi
+                sorted_values = max_group["Standard Value"].sort_values()
+                if len(sorted_values) > 2:
+                    trimmed_values = sorted_values.iloc[1:-1]  # Esclude il primo e l'ultimo elemento
+                    median_idx = (trimmed_values - trimmed_values.median()).abs().idxmin()  # Trova l'indice più vicino alla mediana
+                else:
+                    median_idx = sorted_values.idxmin()  # Se meno di 3 elementi, usa il minimo
+                indexes.append(median_idx)
 
         filter_data = duplicate_data.loc[indexes]
 
-        return pd.concat([unique_data,filter_data])
+        return pd.concat([unique_data, filter_data])
+
     
     def selct_quality( self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -206,8 +210,6 @@ class Cleaner():
         df_perc_rev_inact['Class'] = 0
         df_perc_rev_act = df_perc_act.copy()
         df_perc_rev_act['Class'] = 1
-
-        #########perc finished##########
 ##attivi
         df_act_act = df_act[df_act['Standard Value'] <= self.args.thr_act]
         df_act_rev_act = df_act_act.copy()
@@ -252,8 +254,6 @@ class Cleaner():
                 ratio_active_inactive = num_std_active / num_std_inactive
             if num_perc_inactive !=0:
                 ratio_active_inactive = num_perc_active / num_perc_inactive
-            
-
             data_dict = {
                 'Target Chembl ID': target_id,
                 'Target Name': g['Target Name'].iloc[0],

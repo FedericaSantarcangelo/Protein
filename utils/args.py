@@ -25,7 +25,7 @@ def data_cleaning_args(parser : ArgumentParser) -> None:
     # Add arguments for the priority of the relations, standard types and sources
     parser.add_argument('--rel_pri', type=str, default="{'=':1, '=<':2, '>=':3, '>':4,'<':5}",
                         help="relation priority")
-    parser.add_argument('--sty_pri', type=str, default="{'IC50':1, 'Ki':2, 'Kd':3, 'EC50':4, 'Potency':5,'Inhibition':6, 'Activity':7}",
+    parser.add_argument('--sty_pri', type=str, default="{'IC50':1, 'Ki':2, 'Kd':3, 'EC50':4, 'Potency':5,'Inhibition':6, 'INH':7, 'Inhibition (at 100uM)':8, 'Enzyme Inhibition':9, 'Activity':10,'Enzyme Activity':11}",
                         help="standard type priority")
     parser.add_argument('--src_pri', type=str, default="{'Scientific Literature':1, 'BindingDB Database':2, 'Fraunhofer HDAC6':3, 'PubChem':4}",
                         help="source priority")

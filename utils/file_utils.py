@@ -37,20 +37,19 @@ def drop_columns(df: pd.DataFrame) -> pd.DataFrame:
     Drop the columns from the dataframe
     :return: the dataframe without the columns
     """
-    return df.drop(columns=['Molecule Name','Molecular Weight','#RO5 Violations','AlogP','pChEMBL Value',
-                            'Data Validity Comment','Comment','Uo Units','Ligand Efficiency BEI',
+    return df.drop(columns=['Molecule Name','Molecular Weight','#RO5 Violations','AlogP','Comment','Uo Units','Ligand Efficiency BEI',
                             'Ligand Efficiency LE','Ligand Efficiency LLE','Ligand Efficiency SEI',
-                            'Potential Duplicate','BAO Format ID','Assay Tissue ChEMBL ID','Assay Tissue Name',
+                            'BAO Format ID','Assay Tissue ChEMBL ID','Assay Tissue Name',
                             'Assay Subcellular Fraction','Assay Parameters','Assay Variant Accession','Source ID',
                             'Document Journal','Document Year','Properties','Properties','Action Type'])
-
 
 def add_protein_family(data, protein_file):
     """
     Add the protein family information to the data based on 'Target ChEMBL ID'.
     :return: DataFrame with protein family columns added
     """
-    protein_family = pd.read_csv(protein_file)    
+    protein_family = pd.read_csv(protein_file).drop_duplicates(subset='chembl_id')    
+    
     merged_data = data.merge(protein_family[['chembl_id', 'family', 'accession', 'protein_class_desc']],
                              left_on='Target ChEMBL ID', right_on='chembl_id', how='left')
     merged_data.drop(columns=['chembl_id'], inplace=True)
@@ -89,7 +88,7 @@ def process_directory(path: str,cleaner):
     return cleaned_df
 
 
-def compentence(data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
+def competence(data: pd.DataFrame, assay: pd.DataFrame) -> pd.DataFrame:
     """Filter data based on the confidence score in the assays file
             :return: the filtered data
     """

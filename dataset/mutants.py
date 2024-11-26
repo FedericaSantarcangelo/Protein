@@ -9,6 +9,12 @@ from utils.data_handling import patterns
 
 aminoacid=['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
 
+aminoacids={
+    'Ala':'A','Arg':'R','Asn':'N','Asp':'D','Cys':'C','Gln':'Q','Glu':'E',
+    'Gly':'G','His':'H','Ile':'I','Leu':'L','Lys':'K','Met':'M','Phe':'F',
+    'Pro':'P','Ser':'S','Thr':'T','Trp':'W','Tyr':'Y','Val':'V'
+}
+
 class Mutation():
     def __init__(self, args: Namespace):
         self.args = args
@@ -94,7 +100,7 @@ class Mutation():
         Find if exists the mutation in uniprot and shift it.
         return: True with the shifted mutation if the mutation is in uniprot, False with the shifted mutation otherwise
         """
-        if mutation in uniprot_set:
+        if mutation in uniprot_set: 
             return True, self.shift_mutation(mutation, self.shift)
         else:
             return False, self.shift_mutation(mutation, self.shift)
@@ -105,34 +111,55 @@ class Mutation():
         :return: dataframe with mutations
         """
         combined_pattern = re.compile('|'.join(patterns))
+        mutation_pattern = re.compile(rf"\b({'|'.join(aminoacids.keys())})(\d+)(?:({'|'.join(aminoacids.keys())}))?\b")
+
         mutant = mut.copy()
         for index, row in mutant.iterrows():
             assay_description = row['Assay Description']
             match_mut = combined_pattern.finditer(assay_description)
-            if match_mut:
-                mutations_found = []
-                shifted_mutations = []
-                known_flags = []
-                for match in match_mut:
-                    mutation = match.group()
-                    is_known, shifted = self.find_and_shift(mutation, all_mut)
-                    mutations_found.append(mutation)
+            match_aa_mut = mutation_pattern.finditer(assay_description)
+
+            mutations_found = []
+            shifted_mutations = []
+            known_flags = []
+
+            for match in match_mut:
+                mutation = match.group()
+                mutation = mutation.replace("Del", "del").replace("Deletion", "del").replace("deletion", "del")
+                is_known, shifted = self.find_and_shift(mutation, all_mut)
+                mutations_found.append(mutation)
+                shifted_mutations.append(shifted)
+                known_flags.append(str(is_known))
+
+            for match in match_aa_mut:
+                original_aa, position, new_aa = match.groups()
+                if original_aa in aminoacids and (not new_aa or new_aa in aminoacids):
+                    shortened_mutation = f"{aminoacids[original_aa]}{position}"
+                    if new_aa:
+                        shortened_mutation += aminoacids[new_aa]
+                    
+                    mutations_found = [m for m in mutations_found if original_aa not in m]
+                    
+                    is_known, shifted = self.find_and_shift(shortened_mutation, all_mut)
+                    mutations_found.append(shortened_mutation)
                     shifted_mutations.append(shifted)
                     known_flags.append(str(is_known))
-                if mutations_found:
-                    if len(mutations_found) > 3: 
-                        grouped_mutations = [";".join(mutations_found[i:i+2]) for i in range(0, len(mutations_found), 2)]
-                        grouped_shifted = [";".join(shifted_mutations[i:i+2]) for i in range(0, len(shifted_mutations), 2)]
-                        grouped_known = [";".join(known_flags[i:i+2]) for i in range(0, len(known_flags), 2)]
+
+            if mutations_found:
+                if len(mutations_found) > 3:
+                    mutations_found = list(set(mutations_found)) 
+                    grouped_mutations = [";".join(mutations_found[i:i+2]) for i in range(0, len(mutations_found), 2)]
+                    grouped_shifted = [";".join(shifted_mutations[i:i+2]) for i in range(0, len(shifted_mutations), 2)]
+                    grouped_known = [";".join(known_flags[i:i+2]) for i in range(0, len(known_flags), 2)]
                         
-                        mutant.loc[index, 'mutant'] = ';'.join(grouped_mutations)
-                        mutant.loc[index, 'mutant_known'] = ';'.join(grouped_known)
-                        mutant.loc[index, 'shifted_mutation'] = ';'.join(grouped_shifted)
-                    else:
-                        mutations_found = list(set(mutations_found))
-                        mutant.loc[index, 'mutant'] = '/'.join(mutations_found)
-                        mutant.loc[index, 'mutant_known'] = '/'.join(known_flags)
-                        mutant.loc[index, 'shifted_mutation'] = '/'.join(shifted_mutations)
+                    mutant.loc[index, 'mutant'] = ';'.join(grouped_mutations)
+                    mutant.loc[index, 'mutant_known'] = ';'.join(grouped_known)
+                    mutant.loc[index, 'shifted_mutation'] = ';'.join(grouped_shifted)
+                else:
+                    mutations_found = list(set(mutations_found))
+                    mutant.loc[index, 'mutant'] = '/'.join(mutations_found)
+                    mutant.loc[index, 'mutant_known'] = '/'.join(known_flags)
+                    mutant.loc[index, 'shifted_mutation'] = '/'.join(shifted_mutations)
         return mutant
     
     def format_output(self,no_mut,mut,known_mutations,flag,label):
