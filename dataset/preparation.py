@@ -150,8 +150,8 @@ class Cleaner():
             # Calcola la mediana esclusi gli estremi
                 sorted_values = max_group["Standard Value"].sort_values()
                 if len(sorted_values) > 2:
-                    trimmed_values = sorted_values.iloc[1:-1]  # Esclude il primo e l'ultimo elemento
-                    median_idx = (trimmed_values - trimmed_values.median()).abs().idxmin()  # Trova l'indice più vicino alla mediana
+                    trimmed_values = sorted_values.iloc[1:-1]  
+                    median_idx = (trimmed_values - trimmed_values.median()).abs().idxmin() 
                 else:
                     median_idx = sorted_values.idxmin()  # Se meno di 3 elementi, usa il minimo
                 indexes.append(median_idx)
