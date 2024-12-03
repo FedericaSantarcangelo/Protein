@@ -13,7 +13,7 @@ from datetime import datetime
 from dataset.preparation import Cleaner
 
 from dataset.processing import process_molecules_and_calculate_descriptors
-from utils.args import data_cleaning_args, file_args ,model_args
+from utils.args import data_cleaning_args, file_args #,model_args
 from utils.file_utils import load_file, process_directory, drop_columns, add_protein_family
 from models.classifiers import train_classifier
 from models.regressors import train_regressor
@@ -31,10 +31,13 @@ def parser_args():
     data_cleaning_args(parser)
     parser.add_argument('--path_db', type = str, default = '/home/federica/LAB2/chembl33_20240216',
                         help = 'Specify the path of the database')
-    parser.add_argument('--model', type=str, choices=['classifier', 'regressor'], required=True, help='Type of model to train')
+    #parser.add_argument('--model', type=str, choices=['classifier', 'regressor'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
 
-    model_args(parser)
+    parser.add_argument('--qsar_pilot', action='store_true', help='Run QSAR Pilot analysis with predefined molecules')
+    parser.add_argument('--input_file', type=str, help='Path to the input file with precomputed descriptors')
+
+    #model_args(parser)
     return parser.parse_args()
 
 
@@ -72,16 +75,26 @@ def process_data(cleaner, args):
         df = cleaner.clean_data(df)
     return df
 
+def run_qsar_pilot(input_file, seed):
+    """
+    Run the QSAR pilot study
+    """
+    df = load_file(input_file)
+    df = process_molecules_and_calculate_descriptors(df)
+    return df
+
 def main():
     args = parser_args()
 
-    cleaner = Cleaner(args)
-    cleaned_data = process_data(cleaner, args)
-    df=process_molecules_and_calculate_descriptors(cleaned_data)
-    if args.model_type == 'classifier':
-        train_classifier(df,args)
-    elif args.model_type == 'regressor':
-        train_regressor(df,args)
+    if args.qsar_pilot:
+        if not args.input_file:
+            print("Error: --qsar_pilot requires --input_file to be specified.")
+            return
+        df = run_qsar_pilot(args.input_file,args.seed)
+
+    else:
+        cleaner = Cleaner(args)
+        cleaned_data = process_data(cleaner, args)
 
 if __name__ == '__main__':
     main()

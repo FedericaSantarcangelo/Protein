@@ -7,9 +7,6 @@ import pandas as pd
 import numpy as np
 import os
 
-path = '/home/luca/LAB/LAB_federica/data'
-
-#exclude some Mordered descriptors that causing problems  
 exclude_descriptors = ['BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
 mordred_calculator = Calculator(descriptors, ignore_3D=False)
 
@@ -105,21 +102,17 @@ def process_molecules_and_calculate_descriptors(df):
     for mol_id, smiles in smiles_dict.items():
         results.append(process_molecule(mol_id, smiles))
 
-    # Colonne dei descrittori
     rdkit_descriptor_cols = ['rdkit_' + name for name in rdkit_descriptor_names]
     rdkit_3d_descriptor_cols = ['rdkit_3d_' + name for name in descriptor_functions_3d.keys()]
     mordred_descriptor_cols = ['mordred_' + str(d) for d in mordred_calculator.descriptors]
 
     descriptor_cols = rdkit_descriptor_cols + rdkit_3d_descriptor_cols + mordred_descriptor_cols
 
-    # Creazione del DataFrame dei descrittori
     descriptors_df = pd.DataFrame.from_records(results, columns=['Molecule ChEMBL ID', 'Descriptors'])
     descriptors_df = pd.concat([descriptors_df.drop(['Descriptors'], axis=1), descriptors_df['Descriptors'].apply(pd.Series)], axis=1)
     descriptors_df.columns = ['Molecule ChEMBL ID'] + descriptor_cols
 
-    # Merge con il DataFrame originale
     merged_df = pd.merge(df, descriptors_df, on='Molecule ChEMBL ID', how='left')
 
-    # Salvataggio
-    merged_df.to_csv(os.path.join(path, 'final_df.csv'), index=False, encoding='utf-8')
+    merged_df.to_csv('/home/federica/LAB2/egfr_qsar/final_df.csv', index=False, encoding='utf-8')
     return merged_df

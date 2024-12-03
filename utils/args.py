@@ -50,28 +50,3 @@ def file_args(parser: ArgumentParser) -> None:
     parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')
         
         
-def model_args(parser: ArgumentParser) -> None:
-    """ 
-    Add arguments for model training
-    :param parser: the parser istance
-    """
-    parser.add_argument('--model_type', type=str, default='linear', choices=['linear', 'logistic', 'svm', 'rf'],
-                        help='Specify the type of model to use for training')
-    parser.add_argument('--learning_rate', type=float, default=0.01,
-                        help='Specify the learning rate for model training')
-    parser.add_argument('--n_estimators', type=int, default=100,
-                        help='Specify the number of estimators for ensemble models like Random Forest')
-    parser.add_argument('--max_depth', type=int, default=None,
-                        help='Specify the maximum depth of the tree (used for decision tree-based models)')
-    parser.add_argument('--batch_size', type=int, default=32,
-                        help='Specify the batch size for training')
-    parser.add_argument('--epochs', type=int, default=10,
-                        help='Specify the number of epochs for training')
-    parser.add_argument('--regularization', type=float, default=0.0,
-                        help='Specify the regularization parameter to prevent overfitting')
-    parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'sgd', 'rmsprop'],
-                        help='Specify the optimizer to use for training')
-    parser.add_argument('--loss_function', type=str, default='mse', choices=['mse', 'cross_entropy'],
-                        help='Specify the loss function to use for training')
-    parser.add_argument('--save_model_path', type=str, default='./model.pkl',
-                        help='Specify the path to save the trained model')
