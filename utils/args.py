@@ -50,3 +50,17 @@ def file_args(parser: ArgumentParser) -> None:
     parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')
         
         
+def pca_args(parser:ArgumentParser)->None:
+    """
+    Add arguments for PCA and t-SNE analysis
+    :param parser: the parser istance
+    """
+    parser.add_argument('--path_pca', type=str, default='/home/federica/LAB2/egfr_qsar/', 
+                        help='Specify the path of the directory where to save the PCA and t-SNE results')
+    parser.add_argument('--n_clusters', type=int, default=5, help='Specify the number of clusters for the KMeans algorithm')
+    parser.add_argument('--n_components_pca', type=int, default=10, help='Specify the number of components for the PCA algorithms')
+    parser.add_argument('--n_components_tsne', type=int, default=2, help='Specify the number of components for the t-SNE algorithms')
+    parser.add_argument('--perplexity', type=int, default=30, help='Specify the perplexity for the t-SNE algorithm')
+    parser.add_argument('--lr_tsne', type=int, default=200, help='Specify the learning rate for the t-SNE algorithm')
+    parser.add_argument('--n_iter', type=int, default=1000, help='Specify the number of iterations for the t-SNE algorithm')
+    parser.add_argument('--similarities', type=str, default='cosine', help='Specify the type of similarity to use for the clustering')
