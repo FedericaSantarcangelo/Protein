@@ -9,6 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 import seaborn as sns
 from argparse import Namespace, ArgumentParser
 from utils.args import pca_args
+from sklearn.metrics import silhouette_score
 
 def get_parser_args():
     parser = ArgumentParser(description='QSAR Pilot Study')
@@ -56,16 +57,20 @@ class DimensionalityReducer():
         cluster_colors = {0: 'blue', 1: 'green', 2: 'orange', 3: 'yellow', 4: 'red'}
         cluster_labels = self.kmeans_data
         
-        plt.figure(figsize=(10,10))
+        plt.figure(figsize=(16,14))
         plt.scatter(self.pca_data[:,0], self.pca_data[:,1], alpha=0.7, 
                                   c=[cluster_colors[label] for label in cluster_labels], s=50)
         plt.title('PCA')
         plt.xlabel('PC1')
         plt.ylabel('PC2')
+        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10) 
+               for color in cluster_colors.values()]
+        labels = [f'Cluster {i}' for i in cluster_colors.keys()]
+        plt.legend(handles, labels, title="Clusters", loc='upper left')
         plt.savefig(os.path.join(self.result_dir, 'pca.png'), bbox_inches='tight')
         plt.close()
 
-        plt.figure(figsize=(10,10))
+        plt.figure(figsize=(16,14))
         plt.scatter(self.tsne_data[:,0], self.tsne_data[:,1], alpha=0.7, 
                                   c=[cluster_colors[label] for label in cluster_labels], s=50)
         plt.title('t-SNE')
@@ -75,26 +80,28 @@ class DimensionalityReducer():
         plt.close()
 
     def save_results(self, filename="dimensionality_results.csv"):
-        # Verifica che i dati siano validi
+        
         if not hasattr(self, 'kmeans_data') or not hasattr(self, 'pca_data') or not hasattr(self, 'tsne_data'):
             raise ValueError("I dati non sono stati calcolati. Assicurati di aver eseguito fit_transform prima di salvare i risultati.")
+        
+        original_score = silhouette_score(self.scaled_data, self.kmeans_data)
+        pca_score = silhouette_score(self.pca_data, self.kmeans_data)
+        tsne_score = silhouette_score(self.tsne_data, self.kmeans_data)
 
-        # Crea il DataFrame con i risultati
         results_df = pd.DataFrame(
             {
                 'Cluster': self.kmeans_data,
                 'PCA1': self.pca_data[:, 0],
                 'PCA2': self.pca_data[:, 1],
                 't-SNE1': self.tsne_data[:, 0],
-                't-SNE2': self.tsne_data[:, 1]
+                't-SNE2': self.tsne_data[:, 1],
+                'Silhouette_Score_Original': original_score,
+                'Silhouette_Score_PCA': pca_score,
+                'Silhouette_Score_tSNE': tsne_score
             }
         )
-
-        # Verifica che il percorso del file sia corretto
         results_path = os.path.join(self.result_dir, filename)
         if not os.path.isdir(self.result_dir):
             raise FileNotFoundError(f"La directory {self.result_dir} non esiste")
 
-        # Salva il DataFrame in un file CSV
         results_df.to_csv(results_path, index=False)
-        print(f"File salvato correttamente in {results_path}")
