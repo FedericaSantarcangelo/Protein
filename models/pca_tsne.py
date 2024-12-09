@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 import seaborn as sns
 from argparse import Namespace, ArgumentParser
-from utils.args import pca_args
+from utils.args import reducer_args
 from sklearn.metrics import silhouette_score
 
 def get_parser_args():
     parser = ArgumentParser(description='QSAR Pilot Study')
-    pca_args(parser)
+    reducer_args(parser)
     return parser
 
 class DimensionalityReducer():
