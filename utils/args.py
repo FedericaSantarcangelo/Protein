@@ -72,7 +72,7 @@ def qsar_args(parser:ArgumentParser)->None:
     """
     parser.add_argument('--path_qsar', type=str, default='/home/federica/LAB2/egfr_qsar/qsar_results/', 
                         help='Specify the path of the directory where to save the QSAR results')
-    parser.add_argument('--model', type=str, choices=['classifier', 'regressor','all'], required=True, help='Type of model to train')
+    parser.add_argument('--model', type=str, choices=['mlp_regressor', 'rf_regressor','lin_regressor','all'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     
     parser.add_argument('--n_estimators', type=int, default=100, help='Number of trees for the Random Forest model')

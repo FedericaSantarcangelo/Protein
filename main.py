@@ -86,6 +86,11 @@ def run_qsar_pilot(input_file, args):
     reducer.plot_results()
     reducer.save_results()
     
+    trainer = QSARModelTrainer(args)
+    X = numerical_data
+    y = df['Standard Value']
+    trainer.train_and_evaluate(X, y)
+
     return df
 
 def main():
@@ -96,10 +101,6 @@ def main():
             print("Error: --qsar_pilot requires --input_file to be specified.")
             return
         df = run_qsar_pilot(args.input_file,args)
-        trainer = QSARModelTrainer(args)
-        X = df.drop(columns=['target'])
-        y = df['target']
-        trainer.train_and_evaluate(X, y)
 
     else:
         cleaner = Cleaner(args)

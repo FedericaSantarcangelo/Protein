@@ -94,7 +94,7 @@ class DimensionalityReducer():
                 'PCA1': self.pca_data[:, 0],
                 'PCA2': self.pca_data[:, 1],
                 't-SNE1': self.tsne_data[:, 0],
-                't-SNE2': self.tsne_data[:, 1],
+                't-SNE2': self.tsne_data[:, 1], #voglio modificare questo!!!
                 'Silhouette_Score_Original': original_score,
                 'Silhouette_Score_PCA': pca_score,
                 'Silhouette_Score_tSNE': tsne_score
