@@ -55,7 +55,7 @@ def reducer_args(parser:ArgumentParser)->None:
     Add arguments for PCA and t-SNE analysis
     :param parser: the parser istance
     """
-    parser.add_argument('--path_pca', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/', 
+    parser.add_argument('--path_pca_tsne', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/', 
                         help='Specify the path of the directory where to save the PCA and t-SNE results')
     parser.add_argument('--n_clusters', type=int, default=5, help='Specify the number of clusters for the KMeans algorithm')
     parser.add_argument('--n_components_pca', type=int, default=10, help='Specify the number of components for the PCA algorithms')

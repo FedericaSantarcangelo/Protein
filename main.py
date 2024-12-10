@@ -14,6 +14,7 @@ from models.pca_tsne import DimensionalityReducer
 from models.qsar_models import QSARModelTrainer
 
 from dataset.processing import process_molecules_and_calculate_descriptors
+from utils.data_handling import prepare_data
 from utils.args import data_cleaning_args, file_args, reducer_args, qsar_args
 from utils.file_utils import load_file, process_directory, drop_columns, add_protein_family
 
@@ -61,13 +62,14 @@ def run_qsar_pilot(input_file, args):
     """
     Run the QSAR pilot study
     """
-    df = load_file(input_file)
+    df = prepare_data(input_file)
     df = process_molecules_and_calculate_descriptors(df)
     numerical_data = df.select_dtypes(include=[np.number])
     numerical_data = numerical_data.dropna(axis=1, how='any')
 
     reducer=DimensionalityReducer(args)
-    reducer.fit_transform(numerical_data)
+    pca_data, tsne_data, kmeans_data = reducer.fit_transform(numerical_data)
+    reducer.plot_pca_variance()
     reducer.comupute_similarity(numerical_data)
     reducer.plot_results()
     reducer.save_results()

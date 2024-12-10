@@ -113,5 +113,5 @@ def process_molecules_and_calculate_descriptors(df):
 
     merged_df = pd.merge(df, descriptors_df, on='Molecule ChEMBL ID', how='left')
 
-    merged_df.to_csv('/home/federica/LAB2/egfr_qsar/final_df.csv', index=False, encoding='utf-8')
+    merged_df.to_csv('/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/final_df.csv', index=False, encoding='utf-8')
     return merged_df
