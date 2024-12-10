@@ -7,8 +7,7 @@ import os
 import sys
 import numpy as np
 from datetime import datetime
-import random
-import torch
+
 
 from dataset.preparation import Cleaner
 from models.pca_tsne import DimensionalityReducer
@@ -36,19 +35,6 @@ def parser_args():
     parser.add_argument('--input_file', type=str, help='Path to the input file with precomputed descriptors')
     qsar_args(parser)
     return parser.parse_args()
-
-def set_random_seed(seed: int) -> None:
-    """
-    Set the seeds at a certain value
-    :param seed: the seed value to be set
-    """
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    try:
-        torch.cuda.manual_seed_all(seed)
-    except BaseException:
-        print("Could not set cuda seed.")
         
 def process_data(cleaner, args):
     """

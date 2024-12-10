@@ -153,4 +153,17 @@ def remove_salts( data: pd.DataFrame, assay, standard_type_act) -> pd.DataFrame:
     data = other_checks(data, standard_type_act)
     return data
 
-        
+def prepare_data(inpout_file):
+    df = pd.read_csv(inpout_file)
+
+    df_prepared=df.drop(columns=['Smiles (RDKit Mol)', 'Document ChEMBL ID'])
+
+    df_prepared['Log Standard Value'] = np.log1p(df_prepared['Standard Value']) 
+
+    Q1 = df_prepared['Log Standard Value'].quantile(0.25)
+    Q3 = df_prepared['Log Standard Value'].quantile(0.75)
+    IQR = Q3 - Q1
+    outliers = (df_prepared['Log Standard Value'] < (Q1 - 1.5 * IQR)) | (df_prepared['Log Standard Value'] > (Q3 + 1.5 * IQR))
+    df_prepared = df_prepared[~outliers]
+
+    return df_prepared

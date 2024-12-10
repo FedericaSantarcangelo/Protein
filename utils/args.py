@@ -55,7 +55,7 @@ def reducer_args(parser:ArgumentParser)->None:
     Add arguments for PCA and t-SNE analysis
     :param parser: the parser istance
     """
-    parser.add_argument('--path_pca', type=str, default='/home/federica/LAB2/egfr_qsar/', 
+    parser.add_argument('--path_pca', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/', 
                         help='Specify the path of the directory where to save the PCA and t-SNE results')
     parser.add_argument('--n_clusters', type=int, default=5, help='Specify the number of clusters for the KMeans algorithm')
     parser.add_argument('--n_components_pca', type=int, default=10, help='Specify the number of components for the PCA algorithms')
@@ -70,7 +70,7 @@ def qsar_args(parser:ArgumentParser)->None:
     Add arguments for QSAR analysis
     :param parser: the parser istance
     """
-    parser.add_argument('--path_qsar', type=str, default='/home/federica/LAB2/egfr_qsar/qsar_results/', 
+    parser.add_argument('--path_qsar', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/', 
                         help='Specify the path of the directory where to save the QSAR results')
     parser.add_argument('--model', type=str, choices=['mlp_regressor', 'rf_regressor','lin_regressor','all'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')

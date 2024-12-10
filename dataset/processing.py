@@ -1,11 +1,10 @@
 
 from rdkit import Chem
-from rdkit.Chem import AllChem, Descriptors, Descriptors3D
+from rdkit.Chem import Descriptors, Descriptors3D
 from rdkit.Chem.SaltRemover import SaltRemover
 from mordred import Calculator, descriptors
 import pandas as pd
 import numpy as np
-import os
 
 exclude_descriptors = ['BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
 mordred_calculator = Calculator(descriptors, ignore_3D=False)

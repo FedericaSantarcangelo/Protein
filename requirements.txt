@@ -8,5 +8,4 @@ rdkit
 regex
 scikit-learn
 scipy
-torch
 wadllib
