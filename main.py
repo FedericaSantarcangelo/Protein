@@ -6,11 +6,13 @@ import os
 
 import sys
 import numpy as np
+import pandas as pd
 from datetime import datetime
 
 
 from dataset.preparation import Cleaner
 from models.pca_tsne import DimensionalityReducer
+
 from models.qsar_models import QSARModelTrainer
 
 from dataset.processing import process_molecules_and_calculate_descriptors
@@ -62,24 +64,17 @@ def run_qsar_pilot(input_file, args):
     """
     Run the QSAR pilot study
     """
-    df = prepare_data(input_file)
+    df = pd.read_csv(input_file)
     df = process_molecules_and_calculate_descriptors(df)
-    numerical_data = df.select_dtypes(include=[np.number])
+    df = prepare_data(df)
+
+    numerical_data=df.select_dtypes(include=[np.number])
     numerical_data = numerical_data.dropna(axis=1, how='any')
 
-    reducer=DimensionalityReducer(args)
-    pca_data, tsne_data, kmeans_data = reducer.fit_transform(numerical_data)
-    reducer.plot_pca_variance()
-    reducer.comupute_similarity(numerical_data)
-    reducer.plot_results()
-    reducer.save_results()
-    
-    trainer = QSARModelTrainer(args)
-    X = numerical_data
-    y = df['Standard Value']
-    trainer.train_and_evaluate(X, y)
+    reducer = DimensionalityReducer(args)
+    results = reducer.fit_transform(numerical_data)
 
-    return df
+    return results
 
 def main():
     args = parser_args()

@@ -15,9 +15,8 @@ descriptor_functions_3d = {name: func for name, func in Descriptors3D.__dict__.i
 
 def prepare_molecule(smiles): 
     """
-    Prepara una molecola per il calcolo dei descrittori
-    :param smiles: la stringa SMILES della molecola
-    :return: un oggetto molecolare preparato
+    prepare a molecule for descriptor calculation
+    :param smiles: the SMILES representation of the molecule
     """
     mol = Chem.MolFromSmiles(smiles, sanitize=True)
     if mol is None:
@@ -28,7 +27,7 @@ def prepare_molecule(smiles):
     try:
         Chem.Kekulize(mol)
         Chem.SanitizeMol(mol)
-    except:
+    except Chem.KekulizeException:
         return None
     return mol
         
@@ -52,7 +51,7 @@ def calculate_rdkit_3d_descriptors(mol):
     :return: una lista di descrittori
     """
     if mol and mol.GetNumConformers() > 0:
-        return [func(mol) if mol.GetNumConformers() > 0 else np.nan for func in descriptor_functions_3d.values()]
+        return [func(mol) for func in descriptor_functions_3d.values()]
     return [np.nan] * len(descriptor_functions_3d)
 
 def calculate_mordred_descriptors(mol):
@@ -85,7 +84,7 @@ def process_molecule(mol_id, smiles):
         combined_descriptors = rdkit_desc + rdkit_3d_desc + mordred_desc
         return mol_id, combined_descriptors
     except Exception as e:
-        print(f"Errore con la molecola {mol_id}: {e}")
+        print(f"error with molecule {mol_id}: {e}")
         total_descriptor_count = len(rdkit_descriptor_names) + len(descriptor_functions_3d) + len(mordred_calculator.descriptors)
         return mol_id, [np.nan] * total_descriptor_count
 

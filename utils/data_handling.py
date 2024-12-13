@@ -2,6 +2,10 @@
 
 import pandas as pd
 import numpy as np
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+import os
+from sklearn.metrics import silhouette_score
 from utils.file_utils import competence
 
 #patterns for finding mutations in the assay description field
@@ -137,7 +141,7 @@ def other_checks(data: pd.DataFrame, standard_type_act) -> pd.DataFrame:
     data = data.loc[data['pChEMBL Value']>=4]
     return data
 
-def remove_salts( data: pd.DataFrame, assay, standard_type_act) -> pd.DataFrame:
+def remove_salts(data: pd.DataFrame, assay, standard_type_act) -> pd.DataFrame:
     """ 
     Remove the salts from the SMILES
     :return: the SMILES without salts
@@ -153,9 +157,7 @@ def remove_salts( data: pd.DataFrame, assay, standard_type_act) -> pd.DataFrame:
     data = other_checks(data, standard_type_act)
     return data
 
-def prepare_data(inpout_file):
-    df = pd.read_csv(inpout_file)
-
+def prepare_data(df : pd.DataFrame) -> pd.DataFrame:
     df_prepared=df.drop(columns=['Smiles (RDKit Mol)', 'Document ChEMBL ID'])
 
     df_prepared['Log Standard Value'] = np.log1p(df_prepared['Standard Value']) 
@@ -165,5 +167,32 @@ def prepare_data(inpout_file):
     IQR = Q3 - Q1
     outliers = (df_prepared['Log Standard Value'] < (Q1 - 1.5 * IQR)) | (df_prepared['Log Standard Value'] > (Q3 + 1.5 * IQR))
     df_prepared = df_prepared[~outliers]
-
     return df_prepared
+
+def elbow(self, data, scaler, max_k=10):
+    inertia = []
+    for k in range(1, max_k):
+        kmeans = KMeans(n_clusters=k, random_state=self.args.seed)
+        kmeans.fit(data)
+        inertia.append(kmeans.inertia_)
+    print(f"Elbow Method: {inertia}")
+    plt.plot(range(1, max_k), inertia, marker='o')
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Inertia')
+    plt.title('Elbow Method')
+    plt.savefig(os.path.join(self.result_dir, f'{scaler}_elbow.png'), bbox_inches='tight')
+    plt.close()
+
+def silhouette(self, data, scaler, max_k=10):
+    silhouette_scores = []
+    for k in range(2, max_k):
+        kmeans = KMeans(n_clusters=k, random_state=self.args.seed)
+        kmeans.fit(data)
+        silhouette_scores.append(silhouette_score(data, kmeans.labels_))
+    print(f"Silhouette Score: {silhouette_scores}")
+    plt.plot(range(2, max_k), silhouette_scores, marker='o')
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Silhouette Score')
+    plt.title('Silhouette Score')
+    plt.savefig(os.path.join(self.result_dir, f'{scaler}_silhouette.png'), bbox_inches='tight')
+    plt.close()

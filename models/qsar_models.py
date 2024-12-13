@@ -1,9 +1,8 @@
 import os
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor 
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
@@ -20,17 +19,17 @@ class QSARModelTrainer:
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=self.args.seed)
 
         if self.args.model in ['lin_regressor', 'all']:
-            self._lin_regressor(X_train, y_train, X_test, y_test)
+            self._log_regressor(X_train, y_train, X_test, y_test)
         if self.args.model in ['rf_regressor', 'all']:
             self._rf_regressor(X_train, y_train, X_test, y_test)
         if self.args.model in ['mlp_regressor', 'all']:
             self._mlp_regressor(X_train, y_train, X_test, y_test)
 
-    def _lin_regressor(self, X_train, y_train, X_test, y_test):
+    def _log_regressor(self, X_train, y_train, X_test, y_test):
         """
         Train and evaluate a regression model
         """
-        model = LinearRegression()
+        model = LogisticRegression()
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         
@@ -47,7 +46,7 @@ class QSARModelTrainer:
     
     def _rf_regressor(self, X_train, y_train, X_test, y_test):
         """
-        Train and evaluate a classification model
+        Train and evaluate a regressor model
         """
         model = RandomForestRegressor(random_state=self.args.seed)
         model.fit(X_train, y_train)
@@ -66,7 +65,7 @@ class QSARModelTrainer:
 
     def _mlp_regressor(self, X_train, y_train, X_test, y_test):
         """
-        Train and evaluate a Multi-Layer Perceptron classifier
+        Train and evaluate a Multi-Layer Perceptron regressor
         """
         model = MLPRegressor(
             hidden_layer_sizes=(self.args.hidden_layer_sizes,),
