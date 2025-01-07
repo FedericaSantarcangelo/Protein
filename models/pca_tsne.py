@@ -9,14 +9,14 @@ from sklearn.preprocessing import (
     MaxAbsScaler, Normalizer, QuantileTransformer, PowerTransformer
 )
 import matplotlib.pyplot as plt
-
+from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 import seaborn as sns
+from utils.data_handling import select_optimal_clusters
 from argparse import Namespace, ArgumentParser
-
 from utils.args import reducer_args
-from utils.data_handling import elbow, silhouette
+
 
 def get_parser_args():
     parser = ArgumentParser(description='QSAR Pilot Study')
@@ -54,10 +54,10 @@ class DimensionalityReducer():
         available_scalers = {
             "StandardScaler": StandardScaler(),
             "MinMaxScaler": MinMaxScaler(),
-            "RobustScaler": RobustScaler(),
+            #"RobustScaler": RobustScaler(),
             "MaxAbsScaler": MaxAbsScaler(),
-            "Normalizer": Normalizer(),
-            "QuantileTransformer": QuantileTransformer(),
+            #"Normalizer": Normalizer(),
+            "QuantileTransformer": QuantileTransformer(n_quantiles=min(1000, data.shape[0])),
             "PowerTransformer": PowerTransformer()
         }
         scalers = {name: available_scalers[name] for name in self.args.scaler} if self.args.scaler else available_scalers
@@ -69,8 +69,11 @@ class DimensionalityReducer():
             scaled_data = scaler.fit_transform(data)
             self.pca.fit(scaled_data)
             cumulative_variance = np.cumsum(self.pca.explained_variance_ratio_)
-            
-            n_components = np.argmax(cumulative_variance >= 0.80) + 1
+        
+            n_components = np.argmax(cumulative_variance >= 0.8) + 1
+            if cumulative_variance[n_components - 1] < 0.80:
+                n_components = len(cumulative_variance)
+        
             if cumulative_variance[n_components - 1] > best_variance:
                 best_variance = cumulative_variance[n_components - 1]
                 best_scaler_name = scaler_name
@@ -78,17 +81,16 @@ class DimensionalityReducer():
         self.best_scaler = scalers[best_scaler_name]
 
     def fit_transform(self, data):
+        data['ID'] = np.arange(len(data))
         results = {}
         if self.best_scaler is None:
             self.select_best_scaler(data)
-
         self.scaled_data = self.best_scaler.fit_transform(data)
         self.comupute_similarity()
         self.pca.fit(self.scaled_data)
-
-        cumulative_variance = np.cumsum(self.pca.explained_variance_ratio_)
         explained_variance = self.pca.explained_variance_ratio_
-
+        cumulative_variance = np.cumsum(self.pca.explained_variance_ratio_)
+        #self.perform_kmeans(self.scaled_data)
         loading_scores = self.coumpute_loading_scores(self.pca, data.columns)
         loading_scores_file = os.path.join(self.result_dir, f'best_scaler_loading_scores.csv')
         loading_scores.to_csv(loading_scores_file, index=True)
@@ -100,9 +102,55 @@ class DimensionalityReducer():
         for threshold, components in components_needed.items():
             pca_reduced = PCA(n_components=components)
             reduced_data = pca_reduced.fit_transform(self.scaled_data)
+
+            reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
+            reduced_df['ID'] = data['ID'].values
+
             self.save_reduced_data(reduced_data, data, 'best_scaler', threshold)
             results[threshold] = reduced_data
+            
+            inertia = self.elbow(reduced_data)
+            silhouette_scores = self.silhouette(reduced_data)
+            optimal_clusters = select_optimal_clusters(inertia, silhouette_scores)
+
+            labels = self.perform_kmeans(reduced_data, optimal_clusters, threshold)
+            self.perform_tsne(reduced_data, labels, threshold)
+
+            id_cluster_df = pd.DataFrame({'ID': reduced_df['ID'], 'Cluster': labels})
+            id_cluster_path = os.path.join(self.result_dir, f'original_data_with_labels_{threshold}.csv')
+            id_cluster_df.to_csv(id_cluster_path, index=False)
+
         return results
+    
+    def elbow( self,data, max_k=10):
+        inertia = []
+        for k in range(1, max_k):
+            kmeans = KMeans(n_clusters=k, random_state=self.args.seed)
+            kmeans.fit(data)
+            inertia.append(kmeans.inertia_)
+        print(f"Elbow Method: {inertia}")
+        plt.plot(range(1, max_k), inertia, marker='o')
+        plt.xlabel('Number of clusters')
+        plt.ylabel('Inertia')
+        plt.title('Elbow Method')
+        plt.savefig(os.path.join(self.result_dir, 'elbow.png'), bbox_inches='tight')
+        plt.close()
+        return inertia
+
+    def silhouette(self, data,  max_k=10):
+        silhouette_scores = []
+        for k in range(2, max_k):
+            kmeans = KMeans(n_clusters=k, random_state=self.args.seed)
+            kmeans.fit(data)
+            silhouette_scores.append(silhouette_score(data, kmeans.labels_))
+        print(f"Silhouette Score: {silhouette_scores}")
+        plt.plot(range(2, max_k), silhouette_scores, marker='o')
+        plt.xlabel('Number of clusters')
+        plt.ylabel('Silhouette Score')
+        plt.title('Silhouette Score')
+        plt.savefig(os.path.join(self.result_dir, 'silhouette.png'), bbox_inches='tight')
+        plt.close()
+        return silhouette_scores
 
     def create_comulative_variance_plot(self,comulative_variance, result_dir, scaler_name):
         plt.figure(figsize=(10,10))
@@ -128,3 +176,60 @@ class DimensionalityReducer():
         reduced_data_path = os.path.join(self.result_dir, f'{scaler_name}_reduced_data_{threshold}.csv')
         reduced_df.to_csv(reduced_data_path, index=False)
     
+    def perform_kmeans(self,data,n_clusters,threshold):
+        kmeans = KMeans(n_clusters=n_clusters,random_state=42)
+        kmeans.fit(data)
+        labels = kmeans.labels_
+        centers = kmeans.cluster_centers_
+
+        cluster_label_path = os.path.join(self.result_dir, f'{threshold}_cluster_labels.csv')
+        pd.DataFrame(labels, columns=['Cluster']).to_csv(cluster_label_path, index=False)
+
+        centers_path=os.path.join(self.result_dir, f'{threshold}_cluster_centers.csv')
+        pd.DataFrame(centers, columns=[f'PC{i+1}' for i in range(centers.shape[1])]).to_csv(centers_path, index=False)
+
+        self.plot_kmeans_clusters(data, labels, centers,threshold)
+        return labels
+
+    def plot_kmeans_clusters(self, data, labels, centers, threshold):
+        plt.figure(figsize=(10, 10))
+        if data.shape[1] > 1:
+            plt.scatter(data[:, 0], data[:, 1], c=labels, cmap='viridis')
+            plt.scatter(centers[:, 0], centers[:, 1], c='red', marker='x')
+            plt.xlabel('PC1')
+            plt.ylabel('PC2')
+        else:
+            plt.scatter(data[:, 0], np.zeros_like(data[:, 0]), c=labels, cmap='viridis')
+            plt.scatter(centers[:, 0], np.zeros_like(centers[:, 0]), c='red', marker='x')
+            plt.xlabel('PC1')
+            plt.ylabel('Constant')
+        plt.title(f'KMeans Clusters (Threshold: {threshold})')
+        plt.savefig(os.path.join(self.result_dir, f'{threshold}_kmeans_clusters.png'))
+        plt.close()
+
+    def perform_tsne(self, data, labels, threshold):
+        n_components = min(self.args.n_components_tsne, data.shape[1])
+        tsne = TSNE(n_components=n_components, perplexity=self.args.perplexity,
+                learning_rate=self.args.lr_tsne, n_iter=self.args.n_iter, random_state=42)
+        tsne_results = tsne.fit_transform(data)
+
+        tsne_df = pd.DataFrame(tsne_results, columns=[f'TSNE{i+1}' for i in range(tsne_results.shape[1])])
+        tsne_path = os.path.join(self.result_dir, f'{threshold}_tsne_results.csv')
+        tsne_df.to_csv(tsne_path, index=False)
+
+        self.plot_tsne(tsne_results, labels, threshold)
+
+    def plot_tsne(self, tsne_results, labels, threshold):
+        plt.figure(figsize=(10, 10))
+        if tsne_results.shape[1] > 1:
+            scatter = plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=labels, cmap='viridis', s=10)
+            plt.xlabel('TSNE1')
+            plt.ylabel('TSNE2')
+        else:
+            scatter = plt.scatter(tsne_results[:, 0], np.zeros_like(tsne_results[:, 0]), c=labels, cmap='viridis', s=10)
+            plt.xlabel('TSNE1')
+            plt.ylabel('Constant')
+        plt.title(f't-SNE Results (Threshold: {threshold})')
+        plt.colorbar(scatter)
+        plt.savefig(os.path.join(self.result_dir, f'{threshold}_tsne_results.png'))
+        plt.close()

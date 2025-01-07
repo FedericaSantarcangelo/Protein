@@ -1,8 +1,8 @@
 import os
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestRegressor 
-from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
@@ -18,45 +18,63 @@ class QSARModelTrainer:
         """
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=self.args.seed)
 
-        if self.args.model in ['lin_regressor', 'all']:
-            self._log_regressor(X_train, y_train, X_test, y_test)
+        if self.args.model in ['sv_regressor', 'all']:
+            self._sv_regressor(X_train, y_train, X_test, y_test)
         if self.args.model in ['rf_regressor', 'all']:
             self._rf_regressor(X_train, y_train, X_test, y_test)
         if self.args.model in ['mlp_regressor', 'all']:
             self._mlp_regressor(X_train, y_train, X_test, y_test)
 
-    def _log_regressor(self, X_train, y_train, X_test, y_test):
+    def _sv_regressor(self, X_train, y_train, X_test, y_test):
         """
         Train and evaluate a regression model
         """
-        model = LogisticRegression()
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+        param_grid = {
+            'C': [0.1, 1, 10, 100],
+            'epsilon': [0.01, 0.1, 1],
+            'kernel': ['linear', 'poly', 'rbf', 'sigmoid']
+        }
+        grid_search = GridSearchCV(SVR(), param_grid, cv=5, scoring='r2', n_jobs=-1)
+        grid_search.fit(X_train, y_train)
+        best_model = grid_search.best_estimator_
+
+        y_pred = best_model.predict(X_test)
         
         mse = mean_squared_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
         
         results = {
-            'Model': 'Linear Regression',
+            'Model': 'SVR',
+            'Best Params': grid_search.best_params_,
             'MSE': mse,
             'R2': r2
         }
         
-        self._save_results(results, 'lin_regressor_results.csv')
+        self._save_results(results, 'sv_regressor_results.csv')
     
     def _rf_regressor(self, X_train, y_train, X_test, y_test):
         """
-        Train and evaluate a regressor model
+        Train and evaluate a Random Forest regressor model
         """
-        model = RandomForestRegressor(random_state=self.args.seed)
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+        param_grid = {
+            'n_estimators': [100, 200, 300],
+            'max_depth': [None, 10, 20, 30],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4],
+            'bootstrap': [True, False]
+        }
+        grid_search = GridSearchCV(RandomForestRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='r2', n_jobs=-1)
+        grid_search.fit(X_train, y_train)
+        best_model = grid_search.best_estimator_
+
+        y_pred = best_model.predict(X_test)
         
         mse = mean_squared_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
         
         results = {
             'Model': 'Random Forest Regressor',
+            'Best Params': grid_search.best_params_,
             'MSE': mse,
             'R2': r2
         }
@@ -67,30 +85,26 @@ class QSARModelTrainer:
         """
         Train and evaluate a Multi-Layer Perceptron regressor
         """
-        model = MLPRegressor(
-            hidden_layer_sizes=(self.args.hidden_layer_sizes,),
-            activation=self.args.activation,
-            solver=self.args.solver,
-            alpha=self.args.alpha,
-            learning_rate=self.args.learning_rate,
-            learning_rate_init=self.args.learning_rate_init,
-            tol=self.args.tol,
-            early_stopping=self.args.early_stopping,
-            validation_fraction=self.args.validation_fraction,
-            beta_1=self.args.beta_1,
-            beta_2=self.args.beta_2,
-            epsilon=self.args.epsilon,
-            random_state=self.args.seed
-        )
-        
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+        param_grid = {
+            'hidden_layer_sizes': [(50,), (100,), (50, 50), (100, 50)],
+            'activation': ['tanh', 'relu'],
+            'solver': ['adam', 'sgd'],
+            'alpha': [0.0001, 0.001, 0.01],
+            'learning_rate': ['constant', 'adaptive'],
+            'max_iter': [200, 500]
+        }
+        grid_search = GridSearchCV(MLPRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='r2', n_jobs=-1)
+        grid_search.fit(X_train, y_train)
+        best_model = grid_search.best_estimator_
+
+        y_pred = best_model.predict(X_test)
 
         mse = mean_squared_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
 
         results = {
             'Model': 'MLP Regressor',
+            'Best Params': grid_search.best_params_,
             'MSE': mse,
             'R2': r2
         }

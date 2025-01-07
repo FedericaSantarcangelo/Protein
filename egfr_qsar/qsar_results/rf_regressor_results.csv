@@ -1,2 +1,2 @@
-Model,MSE,R2
-Random Forest Regressor,352837.0903531857,0.014356438637622926
+Model,Best Params,MSE,R2
+Random Forest Regressor,"{'bootstrap': True, 'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 10, 'n_estimators': 200}",642680.3247741178,-0.795315009240698

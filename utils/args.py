@@ -58,7 +58,6 @@ def reducer_args(parser:ArgumentParser)->None:
     parser.add_argument('--path_pca_tsne', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/pca_tsne/', 
                         help='Specify the path of the directory where to save the PCA and t-SNE results')
     parser.add_argument('--n_clusters', type=int, default=5, help='Specify the number of clusters for the KMeans algorithm')
-    parser.add_argument('--n_components_pca', type=int, default=3, help='Specify the number of components for the PCA algorithms')
     parser.add_argument('--n_components_tsne', type=int, default=2, help='Specify the number of components for the t-SNE algorithms')
     parser.add_argument('--perplexity', type=int, default=30, help='Specify the perplexity for the t-SNE algorithm')
     parser.add_argument('--lr_tsne', type=int, default=200, help='Specify the learning rate for the t-SNE algorithm')
@@ -74,7 +73,7 @@ def qsar_args(parser:ArgumentParser)->None:
     """
     parser.add_argument('--path_qsar', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/', 
                         help='Specify the path of the directory where to save the QSAR results')
-    parser.add_argument('--model', type=str, choices=['mlp_regressor', 'rf_regressor','lin_regressor','all'], required=True, help='Type of model to train')
+    parser.add_argument('--model', type=str, choices=['mlp_regressor', 'rf_regressor','sv_regressor','all'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     
     parser.add_argument('--n_estimators', type=int, default=100, help='Number of trees for the Random Forest model')

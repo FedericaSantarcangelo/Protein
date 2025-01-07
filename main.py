@@ -74,6 +74,11 @@ def run_qsar_pilot(input_file, args):
     reducer = DimensionalityReducer(args)
     results = reducer.fit_transform(numerical_data)
 
+    X = results[0.8]
+    y = df['Standard Value']
+
+    model_trainer = QSARModelTrainer(args)
+    model_trainer.train_and_evaluate(X, y)
     return results
 
 def main():

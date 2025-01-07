@@ -1,0 +1,2 @@
+Model,Best Params,MSE,R2
+SVR,"{'C': 100, 'epsilon': 0.01, 'kernel': 'rbf'}",432468.25121359504,-0.2080916631401939

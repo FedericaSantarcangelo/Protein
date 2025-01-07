@@ -1,2 +1,2 @@
-Model,MSE,R2
-MLP Regressor,1.3974880824108618e+26,-3.903855825163207e+20
+Model,Best Params,MSE,R2
+MLP Regressor,"{'activation': 'relu', 'alpha': 0.0001, 'hidden_layer_sizes': (50,), 'learning_rate': 'constant', 'max_iter': 200, 'solver': 'adam'}",418043.2168479305,-0.16779560971022045

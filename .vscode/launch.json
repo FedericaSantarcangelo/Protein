@@ -28,8 +28,7 @@
                 "--input_file", "/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/osimertinib_main_smiles.csv",
                 "--seed", "42",
                 "--model","all",
-                "--n_clusters","3",
-                "--n_components_pca","3"
+                "--n_clusters","3"
             ]
         }
 

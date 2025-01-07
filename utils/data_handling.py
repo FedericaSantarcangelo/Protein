@@ -1,11 +1,8 @@
 """script function to manage data"""
 
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 import numpy as np
-from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
-import os
-from sklearn.metrics import silhouette_score
 from utils.file_utils import competence
 
 #patterns for finding mutations in the assay description field
@@ -169,30 +166,18 @@ def prepare_data(df : pd.DataFrame) -> pd.DataFrame:
     df_prepared = df_prepared[~outliers]
     return df_prepared
 
-def elbow(self, data, scaler, max_k=10):
-    inertia = []
-    for k in range(1, max_k):
-        kmeans = KMeans(n_clusters=k, random_state=self.args.seed)
-        kmeans.fit(data)
-        inertia.append(kmeans.inertia_)
-    print(f"Elbow Method: {inertia}")
-    plt.plot(range(1, max_k), inertia, marker='o')
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Inertia')
-    plt.title('Elbow Method')
-    plt.savefig(os.path.join(self.result_dir, f'{scaler}_elbow.png'), bbox_inches='tight')
-    plt.close()
-
-def silhouette(self, data, scaler, max_k=10):
-    silhouette_scores = []
-    for k in range(2, max_k):
-        kmeans = KMeans(n_clusters=k, random_state=self.args.seed)
-        kmeans.fit(data)
-        silhouette_scores.append(silhouette_score(data, kmeans.labels_))
-    print(f"Silhouette Score: {silhouette_scores}")
-    plt.plot(range(2, max_k), silhouette_scores, marker='o')
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Silhouette Score')
-    plt.title('Silhouette Score')
-    plt.savefig(os.path.join(self.result_dir, f'{scaler}_silhouette.png'), bbox_inches='tight')
-    plt.close()
+def select_optimal_clusters(inertia_scores, silhouette_scores):
+    """
+    Select the optimal number of clusters
+    """
+    min_length = min(len(inertia_scores), len(silhouette_scores))
+    inertia_scores = inertia_scores[:min_length]
+    silhouette_scores = silhouette_scores[:min_length]
+    silhouette_scaler = MinMaxScaler()
+    normalized_silhouette_scores = silhouette_scaler.fit_transform(np.array(silhouette_scores).reshape(-1, 1)).flatten()
+    inertia_scaler = MinMaxScaler()
+    normalized_inertia_scores = inertia_scaler.fit_transform(np.array(inertia_scores).reshape(-1, 1)).flatten()
+    normalized_inertia_scores = 1 - normalized_inertia_scores
+    combined_scores = normalized_silhouette_scores + normalized_inertia_scores
+    optimal_clusters = combined_scores.argmax()
+    return optimal_clusters
