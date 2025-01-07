@@ -1,6 +1,11 @@
 """ 
 Main module for target cleaning and preparation
 """
+import warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+import matplotlib
+matplotlib.use('Agg')
+
 import argparse
 import os
 

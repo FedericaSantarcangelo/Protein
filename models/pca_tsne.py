@@ -210,7 +210,7 @@ class DimensionalityReducer():
     def perform_tsne(self, data, labels, threshold):
         n_components = min(self.args.n_components_tsne, data.shape[1])
         tsne = TSNE(n_components=n_components, perplexity=self.args.perplexity,
-                learning_rate=self.args.lr_tsne, n_iter=self.args.n_iter, random_state=42)
+                learning_rate=self.args.lr_tsne, max_iter=self.args.n_iter, random_state=42)
         tsne_results = tsne.fit_transform(data)
 
         tsne_df = pd.DataFrame(tsne_results, columns=[f'TSNE{i+1}' for i in range(tsne_results.shape[1])])

@@ -1,3 +1,5 @@
+import warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 from rdkit import Chem
 from rdkit.Chem import Descriptors, Descriptors3D
@@ -12,11 +14,10 @@ mordred_calculator = Calculator(descriptors, ignore_3D=False)
 rdkit_descriptor_names = [name for name, func in Descriptors._descList if name not in exclude_descriptors]
 descriptor_functions_3d = {name: func for name, func in Descriptors3D.__dict__.items() if callable(func) and not name.startswith('_')}
 
-
 def prepare_molecule(smiles): 
     """
     prepare a molecule for descriptor calculation
-    :param smiles: the SMILES representation of the molecule
+    :return: the molecule
     """
     mol = Chem.MolFromSmiles(smiles, sanitize=True)
     if mol is None:
@@ -30,25 +31,21 @@ def prepare_molecule(smiles):
     except Chem.KekulizeException:
         return None
     return mol
-        
 
 def calculate_rdkit_descriptors(mol):
     """
-    Calcola i descrittori 2D di RDKit
-    :param mol: la molecola
-    :return: una lista di descrittori
+    Compute RDKit descriptors for a molecule
+    :return: the list of RDKit descriptors
     """
     try:
         return [getattr(Descriptors, name)(mol) for name in rdkit_descriptor_names]
     except Exception as e:
         return [np.nan] * len(rdkit_descriptor_names)
-        
-    
+
 def calculate_rdkit_3d_descriptors(mol):
     """
-    Calcola i descrittori 3D di RDKit
-    :param mol: la molecola
-    :return: una lista di descrittori
+    Compute 3D RDKit descriptors for a molecule
+    :return: the list of 3D RDKit descriptors
     """
     if mol and mol.GetNumConformers() > 0:
         return [func(mol) for func in descriptor_functions_3d.values()]
@@ -57,7 +54,6 @@ def calculate_rdkit_3d_descriptors(mol):
 def calculate_mordred_descriptors(mol):
     """
     Compute Mordred descriptors for a molecule
-    :param mol: the molecule
     return: the list of Mordred descriptors
     """
     if mol:
@@ -67,16 +63,13 @@ def calculate_mordred_descriptors(mol):
 
 def process_molecule(mol_id, smiles):
     """
-    Processa una molecola e calcola tutti i descrittori
-    :param mol_id: identificativo della molecola
-    :param smiles: rappresentazione SMILES
-    :return: identificativo della molecola e lista dei descrittori
+    Process a molecule and calculate its descriptors
+    :return: the molecule ID and the list of descriptors
     """
     try:
         mol = prepare_molecule(smiles)
         if mol is None:
             raise ValueError("Molecola non valida")
-        
         rdkit_desc = calculate_rdkit_descriptors(mol)
         rdkit_3d_desc = calculate_rdkit_3d_descriptors(mol)
         mordred_desc = calculate_mordred_descriptors(mol)
@@ -90,9 +83,8 @@ def process_molecule(mol_id, smiles):
 
 def process_molecules_and_calculate_descriptors(df):
     """
-    Processa ogni molecola in un DataFrame e calcola i descrittori
-    :param df: il DataFrame con le molecole
-    :return: il DataFrame con i descrittori calcolati
+    Process molecules and calculate their descriptors
+    :return: the dataframe with the descriptors
     """
     smiles_dict = df.set_index('Molecule ChEMBL ID')['Smiles'].to_dict()
 
