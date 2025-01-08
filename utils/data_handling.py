@@ -1,4 +1,6 @@
-"""script function to manage data"""
+"""script function to manage data
+@Author: Federica Santarcangelo
+"""
 
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler

@@ -1,5 +1,7 @@
 """ 
 Main module for target cleaning and preparation
+
+@autor: Federica Santarcangelo
 """
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
@@ -73,13 +75,13 @@ def run_qsar_pilot(input_file, args):
     df = process_molecules_and_calculate_descriptors(df)
     df = prepare_data(df)
 
-    numerical_data=df.select_dtypes(include=[np.number])
+    numerical_data = df.select_dtypes(include=[np.number])
     numerical_data = numerical_data.dropna(axis=1, how='any')
 
     reducer = DimensionalityReducer(args)
     results = reducer.fit_transform(numerical_data)
 
-    X = results[0.8]
+    X = results['reduced_data']  
     y = df['Standard Value']
 
     model_trainer = QSARModelTrainer(args)

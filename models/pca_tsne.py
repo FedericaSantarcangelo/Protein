@@ -23,40 +23,43 @@ def get_parser_args():
     reducer_args(parser)
     return parser
 
+
 class DimensionalityReducer():
     def __init__(self, args: Namespace):
         self.args = args
         self.similarity = cosine_similarity if self.args.similarities == 'cosine' else euclidean_distances
-        self.pca=PCA()
+        self.pca = PCA(n_components=3)
         self.result_dir = self.args.path_pca_tsne
         os.makedirs(self.result_dir, exist_ok=True)
         self.best_scaler = None
-    
-    def comupute_similarity(self):
+        self.scaled_data = None
+        self.similarity_matrix = None
+
+    def compute_similarity(self):
         self.similarity_matrix = self.similarity(self.scaled_data)
         self._plot_similarity_matrix(self.similarity_matrix, self.args.similarities + '_matrix.png')
         similarity_df = pd.DataFrame(self.similarity_matrix)
         similarity_path = os.path.join(self.result_dir, self.args.similarities + '_matrix.csv')
         similarity_df.to_csv(similarity_path, index=False)
         return self.similarity_matrix
-    
+
     def _plot_similarity_matrix(self, matrix, filename):
-        plt.figure(figsize=(10,10))
+        plt.figure(figsize=(10, 10))
         sns.heatmap(matrix, cmap='coolwarm', annot=False)
         plt.savefig(os.path.join(self.result_dir, filename), bbox_inches='tight')
         plt.close()
 
-    def coumpute_loading_scores(self, pca, feature_names):
+    def compute_loading_scores(self, pca, feature_names):
         loadings = pca.components_.T
         return pd.DataFrame(loadings, index=feature_names, columns=[f"PC{i+1}" for i in range(loadings.shape[1])])
-    
+
     def select_best_scaler(self, data):
         available_scalers = {
             "StandardScaler": StandardScaler(),
             "MinMaxScaler": MinMaxScaler(),
-            #"RobustScaler": RobustScaler(),
+            "RobustScaler": RobustScaler(),
             "MaxAbsScaler": MaxAbsScaler(),
-            #"Normalizer": Normalizer(),
+            "Normalizer": Normalizer(),
             "QuantileTransformer": QuantileTransformer(n_quantiles=min(1000, data.shape[0])),
             "PowerTransformer": PowerTransformer()
         }
@@ -69,13 +72,12 @@ class DimensionalityReducer():
             scaled_data = scaler.fit_transform(data)
             self.pca.fit(scaled_data)
             cumulative_variance = np.cumsum(self.pca.explained_variance_ratio_)
-        
-            n_components = np.argmax(cumulative_variance >= 0.8) + 1
-            if cumulative_variance[n_components - 1] < 0.80:
-                n_components = len(cumulative_variance)
-        
-            if cumulative_variance[n_components - 1] > best_variance:
-                best_variance = cumulative_variance[n_components - 1]
+
+            n_components = min(3, len(cumulative_variance))
+            variance_explained = cumulative_variance[n_components - 1]
+
+            if variance_explained > best_variance:
+                best_variance = variance_explained
                 best_scaler_name = scaler_name
 
         self.best_scaler = scalers[best_scaler_name]
@@ -86,43 +88,43 @@ class DimensionalityReducer():
         if self.best_scaler is None:
             self.select_best_scaler(data)
         self.scaled_data = self.best_scaler.fit_transform(data)
-        self.comupute_similarity()
+        self.compute_similarity()
         self.pca.fit(self.scaled_data)
         explained_variance = self.pca.explained_variance_ratio_
         cumulative_variance = np.cumsum(self.pca.explained_variance_ratio_)
-        #self.perform_kmeans(self.scaled_data)
-        loading_scores = self.coumpute_loading_scores(self.pca, data.columns)
+
+        loading_scores = self.compute_loading_scores(self.pca, data.columns)
         loading_scores_file = os.path.join(self.result_dir, f'best_scaler_loading_scores.csv')
         loading_scores.to_csv(loading_scores_file, index=True)
 
-        self.create_comulative_variance_plot(cumulative_variance, self.result_dir, 'best_scaler')
+        self.create_cumulative_variance_plot(cumulative_variance, self.result_dir, 'best_scaler')
         self.create_individual_variance_plot(explained_variance, self.result_dir, 'best_scaler')
 
-        components_needed = {threshold: np.argmax(cumulative_variance > threshold) + 1 for threshold in [0.7,0.75,0.8]}
-        for threshold, components in components_needed.items():
-            pca_reduced = PCA(n_components=components)
-            reduced_data = pca_reduced.fit_transform(self.scaled_data)
+        components_needed = min(3, len(explained_variance))
+        pca_reduced = PCA(n_components=components_needed)
+        reduced_data = pca_reduced.fit_transform(self.scaled_data)
 
-            reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
-            reduced_df['ID'] = data['ID'].values
+        reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
 
-            self.save_reduced_data(reduced_data, data, 'best_scaler', threshold)
-            results[threshold] = reduced_data
-            
-            inertia = self.elbow(reduced_data)
-            silhouette_scores = self.silhouette(reduced_data)
-            optimal_clusters = select_optimal_clusters(inertia, silhouette_scores)
+        reduced_df['ID'] = data['ID'].values
 
-            labels = self.perform_kmeans(reduced_data, optimal_clusters, threshold)
-            self.perform_tsne(reduced_data, labels, threshold)
+        self.save_reduced_data(reduced_data, data, 'best_scaler', 'reduced_data')
+        results['reduced_data'] = reduced_data
 
-            id_cluster_df = pd.DataFrame({'ID': reduced_df['ID'], 'Cluster': labels})
-            id_cluster_path = os.path.join(self.result_dir, f'original_data_with_labels_{threshold}.csv')
-            id_cluster_df.to_csv(id_cluster_path, index=False)
+        inertia = self.elbow(reduced_data)
+        silhouette_scores = self.silhouette(reduced_data)
+        optimal_clusters = select_optimal_clusters(inertia, silhouette_scores)
+
+        labels = self.perform_kmeans(reduced_data, optimal_clusters, 'reduced_data')
+        self.perform_tsne(reduced_data, labels, 'reduced_data')
+
+        id_cluster_df = pd.DataFrame({'ID': reduced_df['ID'], 'Cluster': labels})
+        id_cluster_path = os.path.join(self.result_dir, f'original_data_with_labels.csv')
+        id_cluster_df.to_csv(id_cluster_path, index=False)
 
         return results
-    
-    def elbow( self,data, max_k=10):
+
+    def elbow(self, data, max_k=10):
         inertia = []
         for k in range(1, max_k):
             kmeans = KMeans(n_clusters=k, random_state=self.args.seed)
@@ -137,7 +139,7 @@ class DimensionalityReducer():
         plt.close()
         return inertia
 
-    def silhouette(self, data,  max_k=10):
+    def silhouette(self, data, max_k=10):
         silhouette_scores = []
         for k in range(2, max_k):
             kmeans = KMeans(n_clusters=k, random_state=self.args.seed)
@@ -152,17 +154,17 @@ class DimensionalityReducer():
         plt.close()
         return silhouette_scores
 
-    def create_comulative_variance_plot(self,comulative_variance, result_dir, scaler_name):
-        plt.figure(figsize=(10,10))
-        plt.plot(comulative_variance, marker='o')
+    def create_cumulative_variance_plot(self, cumulative_variance, result_dir, scaler_name):
+        plt.figure(figsize=(10, 10))
+        plt.plot(cumulative_variance, marker='o')
         plt.xlabel('Number of components')
         plt.ylabel('Cumulative explained variance')
         plt.title(f'Cumulative explained variance for {scaler_name}')
         plt.savefig(os.path.join(result_dir, f'{scaler_name}_cumulative_variance.png'), bbox_inches='tight')
         plt.close()
 
-    def create_individual_variance_plot(self,explained_variance, result_dir, scaler_name):
-        plt.figure(figsize=(10,10))
+    def create_individual_variance_plot(self, explained_variance, result_dir, scaler_name):
+        plt.figure(figsize=(10, 10))
         plt.plot(explained_variance, marker='o')
         plt.xlabel('Number of components')
         plt.ylabel('Explained variance')
@@ -170,14 +172,14 @@ class DimensionalityReducer():
         plt.savefig(os.path.join(result_dir, f'{scaler_name}_explained_variance.png'), bbox_inches='tight')
         plt.close()
 
-    def save_reduced_data(self, reduced_data, data,scaler_name, threshold):
-        reduced_df = pd.DataFrame(reduced_data,columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
-        reduced_df = pd.concat([data.reset_index(drop=True),reduced_df], axis=1)
+    def save_reduced_data(self, reduced_data, data, scaler_name, threshold):
+        reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
+        reduced_df = pd.concat([data.reset_index(drop=True), reduced_df], axis=1)
         reduced_data_path = os.path.join(self.result_dir, f'{scaler_name}_reduced_data_{threshold}.csv')
         reduced_df.to_csv(reduced_data_path, index=False)
-    
-    def perform_kmeans(self,data,n_clusters,threshold):
-        kmeans = KMeans(n_clusters=n_clusters,random_state=42)
+
+    def perform_kmeans(self, data, n_clusters, threshold):
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42)
         kmeans.fit(data)
         labels = kmeans.labels_
         centers = kmeans.cluster_centers_
@@ -185,10 +187,10 @@ class DimensionalityReducer():
         cluster_label_path = os.path.join(self.result_dir, f'{threshold}_cluster_labels.csv')
         pd.DataFrame(labels, columns=['Cluster']).to_csv(cluster_label_path, index=False)
 
-        centers_path=os.path.join(self.result_dir, f'{threshold}_cluster_centers.csv')
+        centers_path = os.path.join(self.result_dir, f'{threshold}_cluster_centers.csv')
         pd.DataFrame(centers, columns=[f'PC{i+1}' for i in range(centers.shape[1])]).to_csv(centers_path, index=False)
 
-        self.plot_kmeans_clusters(data, labels, centers,threshold)
+        self.plot_kmeans_clusters(data, labels, centers, threshold)
         return labels
 
     def plot_kmeans_clusters(self, data, labels, centers, threshold):
@@ -210,7 +212,7 @@ class DimensionalityReducer():
     def perform_tsne(self, data, labels, threshold):
         n_components = min(self.args.n_components_tsne, data.shape[1])
         tsne = TSNE(n_components=n_components, perplexity=self.args.perplexity,
-                learning_rate=self.args.lr_tsne, max_iter=self.args.n_iter, random_state=42)
+                    learning_rate=self.args.lr_tsne, max_iter=self.args.n_iter, random_state=42)
         tsne_results = tsne.fit_transform(data)
 
         tsne_df = pd.DataFrame(tsne_results, columns=[f'TSNE{i+1}' for i in range(tsne_results.shape[1])])

@@ -1,0 +1,2 @@
+Model,Best Params,MSE,R2
+Random Forest Regressor,"{'max_depth': None, 'max_features': 'sqrt', 'min_samples_leaf': 2, 'min_samples_split': 2, 'n_estimators': 100}",977121.1137120648,-1.7295688597745973

@@ -1,3 +1,7 @@
+"""
+@Author: Federica Santarcangelo
+"""
+
 from argparse import ArgumentParser
 
 def data_cleaning_args(parser : ArgumentParser) -> None:
@@ -50,7 +54,7 @@ def file_args(parser: ArgumentParser) -> None:
     parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')
         
         
-def reducer_args(parser:ArgumentParser)->None:
+def reducer_args(parser: ArgumentParser) -> None:
     """
     Add arguments for PCA and t-SNE analysis
     :param parser: the parser istance
@@ -66,30 +70,17 @@ def reducer_args(parser:ArgumentParser)->None:
     parser.add_argument('--scaler', type=str, choices=['StandardScaler', 'MinMaxScaler', 'RobustScaler',
     'MaxAbsScaler', 'Normalizer', 'QuantileTransformer', 'PowerTransformer'], nargs='+', help='Specify the type of scaler to use for the data')
 
-def qsar_args(parser:ArgumentParser)->None:
+def qsar_args(parser: ArgumentParser) -> None:
     """
     Add arguments for QSAR analysis
     :param parser: the parser istance
     """
     parser.add_argument('--path_qsar', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/', 
                         help='Specify the path of the directory where to save the QSAR results')
-    parser.add_argument('--model', type=str, choices=['mlp_regressor', 'rf_regressor','sv_regressor','all'], required=True, help='Type of model to train')
+    parser.add_argument('--model', type=str, choices=['rf_regressor','svr_regressor','all'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     
     parser.add_argument('--n_estimators', type=int, default=100, help='Number of trees for the Random Forest model')
     parser.add_argument('--max_depth', type=int, default=10 ,help='Maximum depth of the trees for the Random Forest model')
-    
-    parser.add_argument('--hidden_layer_sizes', type=int, default=10, help='Number of neurons in the hidden layer for the MLP model')
-    parser.add_argument('--activation', type=str, default='relu', help='Activation function for the MLP model')
-    parser.add_argument('--solver', type=str, default='adam', help='Solver for the MLP model')
-    parser.add_argument('--alpha', type=float, default=0.0001, help='L2 penalty for the MLP model')
-    parser.add_argument('--learning_rate', type=str, default='constant', help='Learning rate for the MLP model')
-    parser.add_argument('--learning_rate_init', type=float, default=0.001, help='Initial learning rate for the MLP model')
-    parser.add_argument('--tol', type=float, default=1e-4, help='Tolerance for the MLP model')
-    parser.add_argument('--early_stopping', type=bool, default=False, help='Enable early stopping for the MLP model')
-    parser.add_argument('--validation_fraction', type=float, default=0.1, help='Fraction of the training data to use as validation for the MLP model')
-    parser.add_argument('--beta_1', type=float, default=0.9, help='Beta 1 for the Adam optimizer')
-    parser.add_argument('--beta_2', type=float, default=0.999, help='Beta 2 for the Adam optimizer')
-    parser.add_argument('--epsilon', type=float, default=1e-8, help='Epsilon for the Adam optimizer')
     
     parser.add_argument('--save_predictions', action='store_true', help='Save model predictions to output files')
