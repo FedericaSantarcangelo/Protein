@@ -181,5 +181,5 @@ def select_optimal_clusters(inertia_scores, silhouette_scores):
     normalized_inertia_scores = inertia_scaler.fit_transform(np.array(inertia_scores).reshape(-1, 1)).flatten()
     normalized_inertia_scores = 1 - normalized_inertia_scores
     combined_scores = normalized_silhouette_scores + normalized_inertia_scores
-    optimal_clusters = combined_scores.argmax()
+    optimal_clusters = combined_scores.argmax() + 2
     return optimal_clusters

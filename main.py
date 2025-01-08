@@ -73,10 +73,12 @@ def run_qsar_pilot(input_file, args):
     """
     df = pd.read_csv(input_file)
     df = process_molecules_and_calculate_descriptors(df)
+    df = df.drop('rdkit_Ipc', axis=1)
     df = prepare_data(df)
 
     numerical_data = df.select_dtypes(include=[np.number])
     numerical_data = numerical_data.dropna(axis=1, how='any')
+    numerical_data = numerical_data.drop(columns=['Standard Value','Log Standard Value'])
 
     reducer = DimensionalityReducer(args)
     results = reducer.fit_transform(numerical_data)
