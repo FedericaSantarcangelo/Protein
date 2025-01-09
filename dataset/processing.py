@@ -12,7 +12,7 @@ from mordred import Calculator, descriptors
 import pandas as pd
 import numpy as np
 
-exclude_descriptors = ['BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
+exclude_descriptors = ['rdkit_Ipc','BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
 mordred_calculator = Calculator(descriptors, ignore_3D=False)
 
 rdkit_descriptor_names = [name for name, func in Descriptors._descList if name not in exclude_descriptors]
@@ -110,3 +110,30 @@ def process_molecules_and_calculate_descriptors(df):
 
     merged_df.to_csv('/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/final_df.csv', index=False, encoding='utf-8')
     return merged_df
+
+def remove_zero_variance_features(data, feature_names):
+    """
+    Remove features with zero variance
+    :return: the dataframe without zero variance features
+    """
+    if data.shape[1] != len(feature_names):
+        data = data[:, :len(feature_names)]
+    
+    variance = np.var(data, axis=0)
+    non_zero_variance = variance > 0
+    return data[:, non_zero_variance], feature_names[non_zero_variance]
+
+def remove_highly_correlated_features(data,feature_names,threshold=0.95):
+    """
+    Remove highly correlated features
+    :return: the dataframe without highly correlated features
+    """
+    correlation_matrix = np.corrcoef(data, rowvar=False)
+    upper_trinagular = np.triu(np.ones(correlation_matrix.shape), k=1)
+    to_drop = set()
+
+    for i in range(correlation_matrix.shape[0]):
+        for j in range(i+1, correlation_matrix.shape[1]):
+            if abs(correlation_matrix[i,j]) > threshold:
+                to_drop.add(j)
+    return np.delete(data, list(to_drop), axis=1), [name for i, name in enumerate(feature_names) if i not in to_drop]

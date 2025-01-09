@@ -73,7 +73,6 @@ def run_qsar_pilot(input_file, args):
     """
     df = pd.read_csv(input_file)
     df = process_molecules_and_calculate_descriptors(df)
-    df = df.drop('rdkit_Ipc', axis=1)
     df = prepare_data(df)
 
     numerical_data = df.select_dtypes(include=[np.number])

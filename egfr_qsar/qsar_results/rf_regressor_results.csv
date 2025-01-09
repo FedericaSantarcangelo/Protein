@@ -1,2 +1,2 @@
-Model,Best Params,MSE,R2
-Random Forest Regressor,"{'max_depth': 10, 'max_features': 'sqrt', 'min_samples_leaf': 1, 'min_samples_split': 2, 'n_estimators': 200}",161705.15711991614,0.5482797831860711
+MSE,R2,MAE,Model,Best Params
+4923.754006658321,0.05393010061015313,55.981458702610524,Random Forest,"{'max_depth': None, 'max_features': 'sqrt', 'min_samples_leaf': 4, 'min_samples_split': 2, 'n_estimators': 50}"

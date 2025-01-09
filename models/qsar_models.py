@@ -1,10 +1,10 @@
 from sklearn.model_selection import train_test_split, GridSearchCV,RandomizedSearchCV
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import os
 import pandas as pd
-import lightgbm as lgb
+
 import xgboost as xgb
 
 class QSARModelTrainer:
@@ -23,10 +23,20 @@ class QSARModelTrainer:
             self._sv_regressor(X_train, y_train, X_test, y_test)
         if self.args.model in ['rf_regressor', 'all']:
             self._rf_regressor(X_train, y_train, X_test, y_test)
-        if self.args.model in ['gb_regressor', 'all']:
-            self._gb_regressor(X_train, y_train, X_test, y_test)
         if self.args.model in ['xgb_regressor', 'all']:
             self._xgb_regressor(X_train, y_train, X_test, y_test)
+
+    def _evaluate_model(self, model, X_test, y_test):
+        """
+        Evaluate the model using multiple metrics
+        """
+        y_pred = model.predict(X_test)
+    
+        mse = mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        mae = mean_absolute_error(y_test, y_pred)
+    
+        return {'MSE': mse, 'R2': r2, 'MAE': mae}
 
     def _sv_regressor(self, X_train, y_train, X_test, y_test):
         """
@@ -41,17 +51,10 @@ class QSARModelTrainer:
         random_search.fit(X_train, y_train)
 
         best_model = random_search.best_estimator_
-        y_pred = best_model.predict(X_test)
-
-        mse = mean_squared_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-
-        results = {
-            'Model': 'SVR',
-            'Best Params': random_search.best_estimator_,
-            'MSE': mse,
-            'R2': r2
-        }
+        
+        results = self._evaluate_model(best_model, X_test, y_test)
+        results['Model'] = 'SVR'
+        results['Best Params'] = random_search.best_params_
 
         self._save_results(results, 'svr_results.csv')
 
@@ -70,45 +73,11 @@ class QSARModelTrainer:
         grid_search.fit(X_train, y_train)
 
         best_model = grid_search.best_estimator_
-        y_pred = best_model.predict(X_test)
+        results = self._evaluate_model(best_model, X_test, y_test)
+        results['Model'] = 'Random Forest'
+        results['Best Params'] = grid_search.best_params_
 
-        mse = mean_squared_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-
-        results = {
-            'Model': 'Random Forest Regressor',
-            'Best Params': grid_search.best_params_,
-            'MSE': mse,
-            'R2': r2
-        }
         self._save_results(results, 'rf_regressor_results.csv')
-
-    def _gb_regressor(self, X_train, y_train, X_test, y_test):
-        """
-        Train and evaluate a Gradient Boosting regressor using GridSearchCV
-        """
-        param_grid = {
-            'n_estimators': [100, 200],
-            'learning_rate': [0.01, 0.1, 0.2],
-            'max_depth': [3, 5, 7]
-        }
-        grid_search = GridSearchCV(GradientBoostingRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-
-        best_model = grid_search.best_estimator_
-        y_pred = best_model.predict(X_test)
-
-        mse = mean_squared_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-
-        results = {
-            'Model': 'Gradient Boosting',
-            'Best Params': grid_search.best_params_,
-            'MSE': mse,
-            'R2': r2
-        }
-        self._save_results(results, 'gb_regressor_results.csv')
-
     
     def _xgb_regressor(self, X_train, y_train, X_test, y_test):
         """
@@ -123,17 +92,10 @@ class QSARModelTrainer:
         grid_search.fit(X_train, y_train)
 
         best_model = grid_search.best_estimator_
-        y_pred = best_model.predict(X_test)
+        results = self._evaluate_model(best_model, X_test, y_test)
+        results['Model'] = 'XGBoost'
+        results['Best Params'] = grid_search.best_params_
 
-        mse = mean_squared_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-
-        results = {
-            'Model': 'XGBoost',
-            'Best Params': grid_search.best_params_,
-            'MSE': mse,
-            'R2': r2
-        }
         self._save_results(results, 'xgb_regressor_results.csv')
 
     def _save_results(self, results, filename):

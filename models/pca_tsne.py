@@ -1,31 +1,33 @@
 import os
 import pandas as pd
 import numpy as np
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 
-from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-from sklearn.metrics import silhouette_score
-from sklearn.cluster import KMeans
-from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
-import seaborn as sns
-from utils.data_handling import select_optimal_clusters
 from argparse import Namespace, ArgumentParser
 from utils.args import reducer_args
 
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from utils.data_handling import select_optimal_clusters
+from dataset.processing import remove_highly_correlated_features,remove_zero_variance_features
 
 def get_parser_args():
     parser = ArgumentParser(description='QSAR Pilot Study')
     reducer_args(parser)
     return parser
 
-
 class DimensionalityReducer():
     def __init__(self, args: Namespace):
         self.args = args
         self.similarity = cosine_similarity if self.args.similarities == 'cosine' else euclidean_distances
-        self.pca = PCA(n_components=3)
+        self.pca = PCA(n_components=4)
         self.result_dir = self.args.path_pca_tsne
         os.makedirs(self.result_dir, exist_ok=True)
         self.scaler = StandardScaler()
@@ -55,12 +57,19 @@ class DimensionalityReducer():
         results = {}
 
         self.scaled_data = self.scaler.fit_transform(data)
+
+        feature_names = data.columns[:-1]  # Exclude 'ID' column
+
+        self.scaled_data, feature_names = remove_zero_variance_features(self.scaled_data, feature_names)
+        self.scaled_data, feature_names = remove_highly_correlated_features(self.scaled_data, feature_names)
+
         self.compute_similarity()
+
         self.pca.fit(self.scaled_data)
         explained_variance = self.pca.explained_variance_ratio_
         cumulative_variance = np.cumsum(self.pca.explained_variance_ratio_)
 
-        loading_scores = self.compute_loading_scores(self.pca, data.columns)
+        loading_scores = self.compute_loading_scores(self.pca, feature_names)
         loading_scores_file = os.path.join(self.result_dir, 'standard_scaler_loading_scores.csv')
         loading_scores.to_csv(loading_scores_file, index=True)
 

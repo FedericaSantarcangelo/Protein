@@ -159,13 +159,12 @@ def remove_salts(data: pd.DataFrame, assay, standard_type_act) -> pd.DataFrame:
 def prepare_data(df : pd.DataFrame) -> pd.DataFrame:
     df_prepared=df.drop(columns=['Smiles (RDKit Mol)', 'Document ChEMBL ID'])
 
-    df_prepared['Log Standard Value'] = np.log1p(df_prepared['Standard Value']) 
-
-    Q1 = df_prepared['Log Standard Value'].quantile(0.25)
-    Q3 = df_prepared['Log Standard Value'].quantile(0.75)
+    Q1 = df['Standard Value'].quantile(0.25)
+    Q3 = df['Standard Value'].quantile(0.75)
     IQR = Q3 - Q1
-    outliers = (df_prepared['Log Standard Value'] < (Q1 - 1.5 * IQR)) | (df_prepared['Log Standard Value'] > (Q3 + 1.5 * IQR))
-    df_prepared = df_prepared[~outliers]
+
+    outliers = df[(df['Standard Value'] < (Q1 - 1.5 * IQR)) | (df['Standard Value'] > (Q3 + 1.5 * IQR))].index
+    df_prepared.drop(outliers, inplace=True)
     return df_prepared
 
 def select_optimal_clusters(inertia_scores, silhouette_scores):
