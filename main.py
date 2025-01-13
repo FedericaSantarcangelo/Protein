@@ -77,13 +77,13 @@ def run_qsar_pilot(input_file, args):
 
     numerical_data = df.select_dtypes(include=[np.number])
     numerical_data = numerical_data.dropna(axis=1, how='any')
-    numerical_data = numerical_data.drop(columns=['Standard Value','Log Standard Value'])
+    numerical_data = numerical_data.drop(columns=['Standard Value','Log Standard Value','Root Squared Standard Value'])
 
     reducer = DimensionalityReducer(args)
     results = reducer.fit_transform(numerical_data)
 
     X = results['reduced_data']  
-    y = df['Standard Value']
+    y = df['Root Squared Standard Value']
 
     model_trainer = QSARModelTrainer(args)
     model_trainer.train_and_evaluate(X, y)

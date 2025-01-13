@@ -1,2 +1,0 @@
-MSE,R2,MAE,Model,Best Params
-451758.709060474,-0.2619791825998863,314.5373766528104,SVR,"{'kernel': 'rbf', 'epsilon': 0.1, 'C': 1}"

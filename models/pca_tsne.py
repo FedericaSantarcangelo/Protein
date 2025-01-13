@@ -27,7 +27,7 @@ class DimensionalityReducer():
     def __init__(self, args: Namespace):
         self.args = args
         self.similarity = cosine_similarity if self.args.similarities == 'cosine' else euclidean_distances
-        self.pca = PCA(n_components=4)
+        self.pca = PCA(n_components=3)
         self.result_dir = self.args.path_pca_tsne
         os.makedirs(self.result_dir, exist_ok=True)
         self.scaler = StandardScaler()
