@@ -1,2 +1,2 @@
 MSE,R2,MAE,Model,Best Params
-1202.314823805837,-0.18141225546263473,19.673622517776156,XGBoost,"{'learning_rate': 0.01, 'max_depth': 3, 'n_estimators': 50}"
+1.8727567151992093,0.1788425146686783,1.0253624073803786,XGBoost,"{'learning_rate': 0.01, 'max_depth': 7, 'n_estimators': 50}"

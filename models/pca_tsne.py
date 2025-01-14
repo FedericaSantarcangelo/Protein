@@ -27,7 +27,7 @@ class DimensionalityReducer():
     def __init__(self, args: Namespace):
         self.args = args
         self.similarity = cosine_similarity if self.args.similarities == 'cosine' else euclidean_distances
-        self.pca = PCA(n_components=3)
+        self.pca = PCA(n_components=11)
         self.result_dir = self.args.path_pca_tsne
         os.makedirs(self.result_dir, exist_ok=True)
         self.scaler = StandardScaler()
@@ -52,7 +52,7 @@ class DimensionalityReducer():
         loadings = pca.components_.T
         return pd.DataFrame(loadings, index=feature_names, columns=[f"PC{i+1}" for i in range(loadings.shape[1])])
 
-    def fit_transform(self, data,log):
+    def fit_transform(self, data, log):
         data['ID'] = np.arange(len(data))
         results = {}
 
@@ -65,29 +65,36 @@ class DimensionalityReducer():
 
         self.compute_similarity()
 
+    # Fit PCA
         self.pca.fit(self.scaled_data)
         explained_variance = self.pca.explained_variance_ratio_
         cumulative_variance = np.cumsum(self.pca.explained_variance_ratio_)
 
+    # Compute loading scores
         loading_scores = self.compute_loading_scores(self.pca, feature_names)
         loading_scores_file = os.path.join(self.result_dir, 'standard_scaler_loading_scores.csv')
         loading_scores.to_csv(loading_scores_file, index=True)
 
+    # Plot variance
         self.create_cumulative_variance_plot(cumulative_variance, self.result_dir, 'standard_scaler')
         self.create_individual_variance_plot(explained_variance, self.result_dir, 'standard_scaler')
 
-        components_needed = len(explained_variance)
-        pca_reduced = PCA(n_components=components_needed)
-        reduced_data = pca_reduced.fit_transform(self.scaled_data)
+    # Transform data
+        reduced_data = self.pca.transform(self.scaled_data)
 
-        reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
+    # Analyze correlation with target and select components
+        selected_components = self.analyze_pca_correlation(reduced_data, log)
+
+    # Filter reduced data to keep only selected components
+        reduced_data = reduced_data[:, selected_components]
+
+    # Save selected PCA features
+        reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in selected_components])
         reduced_df['ID'] = data['ID'].values
-
-        self.analyze_pca_correlation(reduced_data, log)
-
-        self.save_reduced_data(reduced_data, data, 'standard_scaler')
+        self.save_reduced_data(reduced_data, data, 'selected_pca_components')
         results['reduced_data'] = reduced_data
 
+    # Clustering and t-SNE
         inertia = self.elbow(reduced_data)
         silhouette_scores = self.silhouette(reduced_data)
         optimal_clusters = select_optimal_clusters(inertia, silhouette_scores)
@@ -101,33 +108,39 @@ class DimensionalityReducer():
 
         return results
     
-    def analyze_pca_correlation(self, reduced_data, log_activity, threshold=3):
+    def analyze_pca_correlation(self, reduced_data, log_activity, threshold=0.25):
         """
-            Analyze the correlation between the PCA components and the activity values
+        Analyze the correlation between the PCA components and the target activity values.
+        Select components with a correlation magnitude above the threshold.
         """
-
         reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
         reduced_df['-log_activity'] = log_activity
-        
+
+        # Compute correlation matrix
         correlation_matrix = reduced_df.corr()
         corr_path = os.path.join(self.result_dir, 'pca_correlation_with_log_activity.csv')
         correlation_matrix.to_csv(corr_path)
 
-        residuals = reduced_df['-log_activity'] - reduced_df.drop(columns=['-log_activity']).dot(
-            correlation_matrix.loc['-log_activity'].iloc[:-1]
-        )
-        residuals_zscore = (residuals - residuals.mean()) / residuals.std()
-        outliers = residuals_zscore.abs() > threshold
+    # Extract correlations with the target
+        target_corr = correlation_matrix['-log_activity'][:-1]  # Exclude the target itself
+        selected_components = target_corr[abs(target_corr) > threshold].index
 
-        outlier_df = reduced_df[outliers]
-        outlier_path = os.path.join(self.result_dir, 'pca_outliers_based_on_log_activity.csv')
-        outlier_df.to_csv(outlier_path, index=False)
+    # Log selected components
+        selected_indices = [int(col[2:]) - 1 for col in selected_components]  # Convert 'PCX' to indices
+        print(f"Selected components based on correlation with target: {selected_components}")
 
+    # Save selected components info
+        selected_path = os.path.join(self.result_dir, 'selected_pca_components.csv')
+        target_corr[selected_components].to_csv(selected_path)
+
+    # Plot heatmap of correlations
         plt.figure(figsize=(10, 8))
         sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
         plt.title("Correlazione tra componenti PCA e -log dell'attività")
         plt.savefig(os.path.join(self.result_dir, 'pca_correlation_with_log_activity.png'), bbox_inches='tight')
         plt.close()
+
+        return selected_indices
 
     def elbow(self, data, max_k=10):
         inertia = []

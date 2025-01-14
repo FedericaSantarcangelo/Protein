@@ -79,7 +79,7 @@ def run_qsar_pilot(input_file, args):
     results = reducer.fit_transform(numerical_data,df['Log Standard Value'])
     #selector = VarianceThreshold(threshold=0.01)
     X = results['reduced_data']  
-    y = df['Root Squared Standard Value']
+    y = df['Log Standard Value']
 
     model_trainer = QSARModelTrainer(args)
     model_trainer.train_and_evaluate(X, y)
