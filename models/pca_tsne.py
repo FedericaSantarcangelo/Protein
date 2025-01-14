@@ -52,7 +52,7 @@ class DimensionalityReducer():
         loadings = pca.components_.T
         return pd.DataFrame(loadings, index=feature_names, columns=[f"PC{i+1}" for i in range(loadings.shape[1])])
 
-    def fit_transform(self, data):
+    def fit_transform(self, data,log):
         data['ID'] = np.arange(len(data))
         results = {}
 
@@ -76,12 +76,14 @@ class DimensionalityReducer():
         self.create_cumulative_variance_plot(cumulative_variance, self.result_dir, 'standard_scaler')
         self.create_individual_variance_plot(explained_variance, self.result_dir, 'standard_scaler')
 
-        components_needed = min(3, len(explained_variance))
+        components_needed = len(explained_variance)
         pca_reduced = PCA(n_components=components_needed)
         reduced_data = pca_reduced.fit_transform(self.scaled_data)
 
         reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
         reduced_df['ID'] = data['ID'].values
+
+        self.analyze_pca_correlation(reduced_data, log)
 
         self.save_reduced_data(reduced_data, data, 'standard_scaler')
         results['reduced_data'] = reduced_data
@@ -98,6 +100,34 @@ class DimensionalityReducer():
         id_cluster_df.to_csv(id_cluster_path, index=False)
 
         return results
+    
+    def analyze_pca_correlation(self, reduced_data, log_activity, threshold=3):
+        """
+            Analyze the correlation between the PCA components and the activity values
+        """
+
+        reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
+        reduced_df['-log_activity'] = log_activity
+        
+        correlation_matrix = reduced_df.corr()
+        corr_path = os.path.join(self.result_dir, 'pca_correlation_with_log_activity.csv')
+        correlation_matrix.to_csv(corr_path)
+
+        residuals = reduced_df['-log_activity'] - reduced_df.drop(columns=['-log_activity']).dot(
+            correlation_matrix.loc['-log_activity'].iloc[:-1]
+        )
+        residuals_zscore = (residuals - residuals.mean()) / residuals.std()
+        outliers = residuals_zscore.abs() > threshold
+
+        outlier_df = reduced_df[outliers]
+        outlier_path = os.path.join(self.result_dir, 'pca_outliers_based_on_log_activity.csv')
+        outlier_df.to_csv(outlier_path, index=False)
+
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+        plt.title("Correlazione tra componenti PCA e -log dell'attività")
+        plt.savefig(os.path.join(self.result_dir, 'pca_correlation_with_log_activity.png'), bbox_inches='tight')
+        plt.close()
 
     def elbow(self, data, max_k=10):
         inertia = []

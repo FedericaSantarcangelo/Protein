@@ -159,7 +159,9 @@ def remove_salts(data: pd.DataFrame, assay, standard_type_act) -> pd.DataFrame:
 def prepare_data(df : pd.DataFrame) -> pd.DataFrame:
     df_prepared=df.drop(columns=['Smiles (RDKit Mol)', 'Document ChEMBL ID'])
 
-    df_prepared['Log Standard Value'] = np.log1p(df_prepared['Standard Value'])
+    if (df_prepared['Standard Value'] <= 0).any():
+        raise ValueError("Standard Value contiene valori non positivi. Impossibile calcolare il -log10.")
+    df_prepared['Log Standard Value'] = -np.log10(df_prepared['Standard Value'])
     df_prepared['Root Squared Standard Value'] = np.sqrt(df_prepared['Standard Value'])
 
     Q1 = df_prepared['Log Standard Value'].quantile(0.25)

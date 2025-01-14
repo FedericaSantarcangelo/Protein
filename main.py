@@ -7,19 +7,16 @@ import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 import matplotlib
 matplotlib.use('Agg')
-
 import argparse
 import os
-
 import sys
 import numpy as np
 import pandas as pd
 from datetime import datetime
 
-
 from dataset.preparation import Cleaner
 from models.pca_tsne import DimensionalityReducer
-
+from sklearn.feature_selection import VarianceThreshold
 from models.qsar_models import QSARModelTrainer
 
 from dataset.processing import process_molecules_and_calculate_descriptors
@@ -56,10 +53,8 @@ def process_data(cleaner, args):
     args.path_output = os.path.join(args.path_output, name)
     if not os.path.exists(args.path_output):
         os.makedirs(args.path_output)
-
     if os.path.isdir(args.path_db):
         df = process_directory(args.path_db, cleaner)
-
     else:
         df = load_file(args.path_db)
         df = drop_columns(df)
@@ -77,11 +72,12 @@ def run_qsar_pilot(input_file, args):
 
     numerical_data = df.select_dtypes(include=[np.number])
     numerical_data = numerical_data.dropna(axis=1, how='any')
+    numerical_data = numerical_data.loc[:, numerical_data.std() > 0]
     numerical_data = numerical_data.drop(columns=['Standard Value','Log Standard Value','Root Squared Standard Value'])
 
     reducer = DimensionalityReducer(args)
-    results = reducer.fit_transform(numerical_data)
-
+    results = reducer.fit_transform(numerical_data,df['Log Standard Value'])
+    #selector = VarianceThreshold(threshold=0.01)
     X = results['reduced_data']  
     y = df['Root Squared Standard Value']
 
@@ -91,13 +87,11 @@ def run_qsar_pilot(input_file, args):
 
 def main():
     args = parser_args()
-
     if args.qsar_pilot:
         if not args.input_file:
             print("Error: --qsar_pilot requires --input_file to be specified.")
             return
         df = run_qsar_pilot(args.input_file,args)
-
     else:
         cleaner = Cleaner(args)
         cleaned_data = process_data(cleaner, args)
