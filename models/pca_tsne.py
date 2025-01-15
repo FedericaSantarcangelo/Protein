@@ -4,20 +4,18 @@
 import os
 import pandas as pd
 import numpy as np
-
 from argparse import Namespace, ArgumentParser
 from utils.args import reducer_args
 from models.plot import plot_tsne, plot_kmeans_clusters, create_cumulative_variance_plot, create_individual_variance_plot, plot_similarity_matrix
 from models.plot import save_loading_scores, elbow, silhouette,save_cluster_labels
 from sklearn.decomposition import PCA
+from sklearn.cross_decomposition import PLSRegression
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
-
 import seaborn as sns
 import matplotlib.pyplot as plt
-
 from utils.data_handling import select_optimal_clusters
 from dataset.processing import remove_highly_correlated_features, remove_zero_variance_features
 
@@ -48,6 +46,27 @@ class DimensionalityReducer():
     def compute_loading_scores(self, pca, feature_names):
         loadings = pca.components_.T
         return pd.DataFrame(loadings, index=feature_names, columns=[f"PC{i+1}" for i in range(loadings.shape[1])])
+    
+    def perform_pls_analysis(self, data, target, n_components=5):
+        """
+        Perform PLS regression and create scatter plots for each component vs -log_activity.
+        """
+        pls = PLSRegression(n_components=n_components)
+        pls.fit(data, target)
+        transformed_data = pls.transform(data)
+        log_activity = target
+
+        for i in range(n_components):
+            component_scores = transformed_data[:, i]
+            plt.figure(figsize=(10, 8))
+            plt.scatter(component_scores, log_activity, color='blue', alpha=0.6)
+            plt.title(f"Scatter plot: PC{i+1} vs -log Activity")
+            plt.xlabel(f"PC{i+1} (Score della {i+1}° componente)")
+            plt.ylabel("-log Activity")
+            plt.grid(True)
+            plt.savefig(os.path.join(self.result_dir, f'pc{i+1}_vs_log_activity.png'), bbox_inches='tight')
+            plt.close()
+        return transformed_data
 
     def fit_transform(self, data, log):
         data['ID'] = np.arange(len(data))
@@ -71,7 +90,11 @@ class DimensionalityReducer():
         selected_components = self.analyze_pca_correlation(reduced_data, log)
         reduced_data = reduced_data[:, selected_components]
         self.save_reduced_data(reduced_data, data, 'selected_pca_components')
+
+        reduced_data_pls = self.perform_pls_analysis(self.scaled_data, log, n_components=5)
+        self.save_reduced_data(reduced_data_pls, data, 'selected_pls_components')
         results['reduced_data'] = reduced_data
+        results['reduced_data_pls'] = reduced_data_pls
 
         inertia = elbow(reduced_data, 10, self.result_dir, self.args.seed)
         silhouette_scores = silhouette(reduced_data, 10, self.result_dir, self.args.seed)
