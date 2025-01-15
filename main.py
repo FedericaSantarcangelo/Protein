@@ -1,10 +1,8 @@
 """ 
 Main module for target cleaning and preparation
 
-@autor: Federica Santarcangelo
+@Author: Federica Santarcangelo
 """
-import warnings
-warnings.filterwarnings('ignore', category=DeprecationWarning)
 import matplotlib
 matplotlib.use('Agg')
 import argparse
@@ -13,21 +11,18 @@ import sys
 import numpy as np
 import pandas as pd
 from datetime import datetime
-
+import logging
 from dataset.preparation import Cleaner
 from models.pca_tsne import DimensionalityReducer
-from sklearn.feature_selection import VarianceThreshold
 from models.qsar_models import QSARModelTrainer
-
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.data_handling import prepare_data
 from utils.args import data_cleaning_args, file_args, reducer_args, qsar_args
 from utils.file_utils import load_file, process_directory, drop_columns, add_protein_family
-
 conf_path = os.getcwd()
 sys.path.append(conf_path)
 
-def parser_args():
+def parser_args() -> argparse.Namespace:
     """
     Parse the arguments
     :return: the arguments
@@ -43,7 +38,7 @@ def parser_args():
     qsar_args(parser)
     return parser.parse_args()
         
-def process_data(cleaner, args):
+def process_data(cleaner, args) -> pd.DataFrame:
     """
     Workflow for data processing before model training
     :return: the processed dataframe
@@ -62,7 +57,7 @@ def process_data(cleaner, args):
         df = cleaner.clean_data(df)
     return df
 
-def run_qsar_pilot(input_file, args):
+def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     """
     Run the QSAR pilot study
     """
@@ -77,13 +72,13 @@ def run_qsar_pilot(input_file, args):
 
     reducer = DimensionalityReducer(args)
     results = reducer.fit_transform(numerical_data,df['Log Standard Value'])
-    #selector = VarianceThreshold(threshold=0.01)
     X = results['reduced_data']  
     y = df['Log Standard Value']
 
     model_trainer = QSARModelTrainer(args)
     model_trainer.train_and_evaluate(X, y)
     return results
+
 
 def main():
     args = parser_args()

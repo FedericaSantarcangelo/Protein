@@ -1,2 +1,2 @@
 MSE,R2,MAE,Model,Best Params
-1.3930323263934186,0.3891897901939807,1.0260365132342166,MLP,"{'activation': 'tanh', 'alpha': 0.001, 'hidden_layer_sizes': (100, 50), 'learning_rate': 'constant', 'solver': 'sgd'}"
+1.3920918953732757,0.38960214592890374,1.025299097402195,MLP,"{'activation': 'tanh', 'alpha': 0.001, 'hidden_layer_sizes': (100, 50), 'learning_rate': 'constant', 'solver': 'sgd'}"
