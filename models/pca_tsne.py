@@ -7,7 +7,7 @@ import numpy as np
 from argparse import Namespace, ArgumentParser
 from utils.args import reducer_args
 from models.plot import plot_tsne, plot_kmeans_clusters, create_cumulative_variance_plot, create_individual_variance_plot, plot_similarity_matrix
-from models.plot import save_loading_scores, elbow, silhouette,save_cluster_labels
+from models.plot import save_loading_scores, elbow, silhouette, save_cluster_labels, plot_pls_results
 from sklearn.decomposition import PCA
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.manifold import TSNE
@@ -18,6 +18,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from utils.data_handling import select_optimal_clusters
 from dataset.processing import remove_highly_correlated_features, remove_zero_variance_features
+from sklearn.model_selection import LeaveOneOut
+from sklearn.metrics import r2_score
+
 
 def get_parser_args():
     parser = ArgumentParser(description='QSAR Pilot Study')
@@ -28,7 +31,6 @@ class DimensionalityReducer():
     def __init__(self, args: Namespace):
         self.args = args
         self.similarity = cosine_similarity if self.args.similarities == 'cosine' else euclidean_distances
-        self.pca = PCA(n_components=11)
         self.result_dir = self.args.path_pca_tsne
         os.makedirs(self.result_dir, exist_ok=True)
         self.scaler = StandardScaler()
@@ -47,27 +49,56 @@ class DimensionalityReducer():
         loadings = pca.components_.T
         return pd.DataFrame(loadings, index=feature_names, columns=[f"PC{i+1}" for i in range(loadings.shape[1])])
     
-    def perform_pls_analysis(self, data, target, n_components=5):
-        """
-        Perform PLS regression and create scatter plots for each component vs -log_activity.
-        """
-        pls = PLSRegression(n_components=n_components)
-        pls.fit(data, target)
-        transformed_data = pls.transform(data)
-        log_activity = target
+    def perform_pls_analysis(self, data, target):
+        data = self.scaler.fit_transform(data)
+        target = self.scaler.fit_transform(target.to_numpy().reshape(-1, 1)).ravel()
+        max_components = min(data.shape[1], len(data) - 1)
+        r2_scores = []
+        q2_scores = []
+        components_range = range(1, max_components + 1)
 
-        for i in range(n_components):
-            component_scores = transformed_data[:, i]
-            plt.figure(figsize=(10, 8))
-            plt.scatter(component_scores, log_activity, color='blue', alpha=0.6)
-            plt.title(f"Scatter plot: PC{i+1} vs -log Activity")
-            plt.xlabel(f"PC{i+1} (Score della {i+1}° componente)")
-            plt.ylabel("-log Activity")
-            plt.grid(True)
-            plt.savefig(os.path.join(self.result_dir, f'pc{i+1}_vs_log_activity.png'), bbox_inches='tight')
-            plt.close()
-        return transformed_data
+        for n_components in components_range:
+            pls = PLSRegression(n_components=n_components)
+            pls.fit(data, target)
+            r2 = pls.score(data, target)
+            r2_scores.append(r2)
 
+            loo = LeaveOneOut()
+            y_pred = np.zeros(target.shape)
+
+            for train_index, test_index in loo.split(data):
+                pls.fit(data[train_index], target[train_index])
+                y_pred[test_index] = pls.predict(data[test_index]).ravel()
+
+            q2 = r2_score(target, y_pred)
+            q2_scores.append(q2)
+
+        plot_pls_results(components_range, r2_scores, q2_scores, self.result_dir)
+
+        optimal_components = self.select_optimal_components(r2_scores, q2_scores, max_components)
+        print(f'Optimal number of components: {optimal_components}')
+        pls_optimal = PLSRegression(n_components=optimal_components)
+        pls_optimal.fit(data, target)
+        reduced_data = pls_optimal.transform(data)
+
+        return reduced_data
+
+    def select_optimal_components(self, r2_scores, q2_scores, max_components):
+        r2_threshold = 0.95
+        q2_threshold_stable = -0.1
+
+        optimal_range = []
+        for i in range(1, len(r2_scores) + 1):
+            if r2_scores[i-1] >= r2_threshold and (q2_scores[i-1] >= q2_threshold_stable or (i > 1 and q2_scores[i-1] >= q2_scores[i-2])):
+                optimal_range.append(i)
+
+        if not optimal_range:
+            optimal_range = [i for i in range(1, len(r2_scores) + 1) if r2_scores[i-1] >= r2_threshold]
+
+        optimal_component = optimal_range[-1] if optimal_range else 1
+        return min(optimal_component, max_components)
+
+    
     def fit_transform(self, data, log):
         data['ID'] = np.arange(len(data))
         results = {}
@@ -76,57 +107,33 @@ class DimensionalityReducer():
         feature_names = data.columns[:-1]
         self.scaled_data, feature_names = remove_zero_variance_features(self.scaled_data, feature_names)
         self.scaled_data, feature_names = remove_highly_correlated_features(self.scaled_data, feature_names)
-        self.compute_similarity()
 
+        self.compute_similarity()
+        reduced_data = self.perform_pls_analysis(self.scaled_data, log)
+        optimal_components = reduced_data.shape[1]
+        self.pca = PCA(n_components=optimal_components)
         self.pca.fit(self.scaled_data)
+
         explained_variance = self.pca.explained_variance_ratio_
-        cumulative_variance = np.cumsum(self.pca.explained_variance_ratio_)
+        cumulative_variance = np.cumsum(explained_variance)
+
         loading_scores = self.compute_loading_scores(self.pca, feature_names)
-        save_loading_scores(loading_scores, 'standard_scaler_loading_scores.csv',self.result_dir)
+        save_loading_scores(loading_scores, 'standard_scaler_loading_scores.csv', self.result_dir)
         create_cumulative_variance_plot(cumulative_variance, self.result_dir, 'standard_scaler')
         create_individual_variance_plot(explained_variance, self.result_dir, 'standard_scaler')
 
-        reduced_data = self.pca.transform(self.scaled_data)
-        selected_components = self.analyze_pca_correlation(reduced_data, log)
-        reduced_data = reduced_data[:, selected_components]
-        self.save_reduced_data(reduced_data, data, 'selected_pca_components')
-
-        reduced_data_pls = self.perform_pls_analysis(self.scaled_data, log, n_components=5)
-        self.save_reduced_data(reduced_data_pls, data, 'selected_pls_components')
         results['reduced_data'] = reduced_data
-        results['reduced_data_pls'] = reduced_data_pls
 
         inertia = elbow(reduced_data, 10, self.result_dir, self.args.seed)
         silhouette_scores = silhouette(reduced_data, 10, self.result_dir, self.args.seed)
         optimal_clusters = select_optimal_clusters(inertia, silhouette_scores)
-        labels = self.perform_kmeans(reduced_data, optimal_clusters)
 
+        labels = self.perform_kmeans(reduced_data, optimal_clusters)
         self.perform_tsne(reduced_data, labels)
-        save_cluster_labels(data, reduced_data, labels,self.result_dir)
+
+        save_cluster_labels(data, reduced_data, labels, self.result_dir)
 
         return results
-    
-    def analyze_pca_correlation(self, reduced_data, log_activity, threshold=0.25):
-        """
-        Analyze the correlation between the PCA components and the target activity values.
-        Select components with a correlation magnitude above the threshold.
-        """
-        reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
-        reduced_df['-log_activity'] = log_activity
-        correlation_matrix = reduced_df.corr()
-        corr_path = os.path.join(self.result_dir, 'pca_correlation_with_log_activity.csv')
-        correlation_matrix.to_csv(corr_path)
-        target_corr = correlation_matrix['-log_activity'][:-1]
-        selected_components = target_corr[abs(target_corr) > threshold].index
-        selected_indices = [int(col[2:]) - 1 for col in selected_components] 
-        selected_path = os.path.join(self.result_dir, 'selected_pca_components.csv')
-        target_corr[selected_components].to_csv(selected_path)
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
-        plt.title("Correlazione tra componenti PCA e -log dell'attività")
-        plt.savefig(os.path.join(self.result_dir, 'pca_correlation_with_log_activity.png'), bbox_inches='tight')
-        plt.close()
-        return selected_indices
 
     def save_reduced_data(self, reduced_data, data, scaler_name):
         reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])

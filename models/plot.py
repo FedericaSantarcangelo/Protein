@@ -42,15 +42,6 @@ def plot_kmeans_clusters(data, labels, centers, result_dir):
     plt.savefig(os.path.join(result_dir, 'kmeans_clusters.png'))
     plt.close()
 
-def create_individual_variance_plot(explained_variance, result_dir, scaler_name):
-    plt.figure(figsize=(10, 10))
-    plt.plot(explained_variance, marker='o')
-    plt.xlabel('Number of components')
-    plt.ylabel('Explained variance')
-    plt.title(f'Explained variance for {scaler_name}')
-    plt.savefig(os.path.join(result_dir, f'{scaler_name}_explained_variance.png'), bbox_inches='tight')
-    plt.close()
-
 def elbow(data, max_k, result_dir, seed):
     inertia = []
     for k in range(1, max_k):
@@ -81,6 +72,23 @@ def silhouette(data, max_k, result_dir, seed):
     plt.close()
     return silhouette_scores
 
+def plot_similarity_matrix(matrix, filename, result_dir):
+    plt.figure(figsize=(10, 10))
+    sns.heatmap(matrix, cmap='coolwarm', annot=False)
+    plt.savefig(os.path.join(result_dir, filename), bbox_inches='tight')
+    plt.close()
+
+def save_cluster_labels(data, reduced_data: np.ndarray, labels: np.ndarray,result_dir: str):
+    reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
+    reduced_df['ID'] = data['ID'].values
+    id_cluster_df = pd.DataFrame({'ID': reduced_df['ID'], 'Cluster': labels})
+    id_cluster_path = os.path.join(result_dir, 'original_data_with_labels.csv')
+    id_cluster_df.to_csv(id_cluster_path, index=False)
+
+def save_loading_scores( loading_scores: pd.DataFrame, filename: str, result_dir: str):
+    loading_scores_file = os.path.join(result_dir, filename)
+    loading_scores.to_csv(loading_scores_file, index=True)
+
 def create_cumulative_variance_plot(cumulative_variance, result_dir, scaler_name):
     plt.figure(figsize=(10, 10))
     plt.plot(cumulative_variance, marker='o')
@@ -90,19 +98,22 @@ def create_cumulative_variance_plot(cumulative_variance, result_dir, scaler_name
     plt.savefig(os.path.join(result_dir, f'{scaler_name}_cumulative_variance.png'), bbox_inches='tight')
     plt.close()
 
-def plot_similarity_matrix(matrix, filename, result_dir):
+def create_individual_variance_plot(explained_variance, result_dir, scaler_name):
     plt.figure(figsize=(10, 10))
-    sns.heatmap(matrix, cmap='coolwarm', annot=False)
-    plt.savefig(os.path.join(result_dir, filename), bbox_inches='tight')
+    plt.plot(explained_variance, marker='o')
+    plt.xlabel('Number of components')
+    plt.ylabel('Explained variance')
+    plt.title(f'Explained variance for {scaler_name}')
+    plt.savefig(os.path.join(result_dir, f'{scaler_name}_explained_variance.png'), bbox_inches='tight')
     plt.close()
 
-def save_loading_scores( loading_scores: pd.DataFrame, filename: str, result_dir: str):
-    loading_scores_file = os.path.join(result_dir, filename)
-    loading_scores.to_csv(loading_scores_file, index=True)
-
-def save_cluster_labels(data, reduced_data: np.ndarray, labels: np.ndarray,result_dir: str):
-    reduced_df = pd.DataFrame(reduced_data, columns=[f'PC{i+1}' for i in range(reduced_data.shape[1])])
-    reduced_df['ID'] = data['ID'].values
-    id_cluster_df = pd.DataFrame({'ID': reduced_df['ID'], 'Cluster': labels})
-    id_cluster_path = os.path.join(result_dir, 'original_data_with_labels.csv')
-    id_cluster_df.to_csv(id_cluster_path, index=False)
+def plot_pls_results(components_range, r2_scores, q2_scores, result_dir):
+    plt.figure(figsize=(10, 6))
+    plt.plot(components_range, r2_scores, label='R2', marker='o', color='blue')
+    plt.plot(components_range, q2_scores, label='Q2 (LOO)', marker='o', color='red')
+    plt.xlabel('Number of PLS Components')
+    plt.ylabel('Score')
+    plt.title('R2 vs Q2 with Increasing PLS Components')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(result_dir, 'r2_q2_vs_components.png'))

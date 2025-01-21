@@ -5,7 +5,6 @@ import pandas as pd
 import os
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
-from sklearn.tree import DecisionTreeRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.svm import SVR
 from xgboost import XGBRegressor
@@ -52,7 +51,7 @@ class QSARModelTrainer:
         """
         param_grid = {
             'n_estimators': [50, 100, 200],
-            'max_features': ['sqrt', 'log2'],
+            'max_features': ['sqrt', 'log2', None],
             'min_samples_split': [2, 5, 10],
             'min_samples_leaf': [1, 2, 4],
             'max_depth': [None, 10, 20, 30]
@@ -91,9 +90,9 @@ class QSARModelTrainer:
         """
         param_grid = {
             'hidden_layer_sizes': [(50,), (100,), (100, 50)],
-            'activation': ['relu', 'tanh'],
-            'solver': ['adam', 'sgd'],
-            'alpha': [0.0001, 0.001],
+            'activation': ['relu', 'tanh', 'logistic'],
+            'solver': ['adam'],
+            'alpha': [0.001, 0.01, 0.1, 1.0],
             'learning_rate': ['constant', 'adaptive']
         }
         grid_search = GridSearchCV(MLPRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
@@ -112,8 +111,9 @@ class QSARModelTrainer:
         """
         param_grid = {
             'C': [0.1, 1, 10],
-            'epsilon': [0.01, 0.1, 0.2],
-            'kernel': ['linear', 'rbf']
+            'epsilon': [0.01, 0.05, 0.1],
+            'kernel': ['linear', 'rbf', 'sigmoid'],
+            'gamma': ['scale', 'auto']
         }
         grid_search = GridSearchCV(SVR(), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
         grid_search.fit(X_train, y_train)
@@ -131,8 +131,12 @@ class QSARModelTrainer:
         """
         param_grid = {
             'n_estimators': [50, 100, 200],
-            'max_depth': [3, 5, 7],
-            'learning_rate': [0.01, 0.1, 0.2]
+            'max_depth': [3, 5, 7, 10],
+            'learning_rate': [0.01, 0.05, 0.1],
+            'subsample': [0.7, 0.8, 0.9],
+            'colsample_bytree': [0.6, 0.8, 1.0],
+            'gamma': [0, 0.1, 0.2],
+            'min_child_weight': [1, 2, 3]
         }
         grid_search = GridSearchCV(XGBRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
         grid_search.fit(X_train, y_train)
