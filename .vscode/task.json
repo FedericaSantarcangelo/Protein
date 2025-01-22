@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Slurm Job",
+            "type": "shell",
+            "command": "sbatch",
+            "args": [
+                "--job-name=qsar_pilot",
+                "--output=qsar_pilot.out",
+                "--error=qsar_pilot.err",
+                "--wrap",
+                "srun python ${workspaceFolder}/main.py --qsar_pilot --input_file /home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/osimertinib_main_smiles.csv --seed 42 --model all --n_clusters 3"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

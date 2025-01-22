@@ -5,32 +5,48 @@
             "name": "data_cleaning",
             "type": "debugpy",
             "request": "launch",
-            "program": "./main.py",
-            "console": "integratedTerminal",    
-            "args": ["--assay_type","B","--assay_organism","Homo sapiens","--BAO_Label","single protein format","--target_type","SINGLE PROTEIN",
-
-                     "--standard_type_perc","Inhibition,Activity,INH,Inhibition (at 100uM),Enzyme Inhibition,Enzyme Activity",
-                     "--standard_type_act","IC50,EC50,Kd,Ki,K In,K Inact,Potency",
-                     "--standard_type_log","pIC50,pEC50,Log IC50,pKi,Log Ki",
-
-                     "--assay_description_perc","10 uM,20 uM,30 uM,40 uM,50 uM,100 uM", 
-                     "--mutation", "True"
-                    ]
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--assay_type", "B",
+                "--assay_organism", "Homo sapiens",
+                "--BAO_Label", "single protein format",
+                "--target_type", "SINGLE PROTEIN",
+                "--standard_type_perc", "Inhibition,Activity,INH,Inhibition (at 100uM),Enzyme Inhibition,Enzyme Activity",
+                "--standard_type_act", "IC50,EC50,Kd,Ki,K In,K Inact,Potency",
+                "--standard_type_log", "pIC50,pEC50,Log IC50,pKi,Log Ki",
+                "--assay_description_perc", "10 uM,20 uM,30 uM,40 uM,50 uM,100 uM",
+                "--mutation", "True"
+            ]
         },
         {
             "name": "qsar_pilot",
             "type": "debugpy",
             "request": "launch",
-            "program": "./main.py",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "args": [
                 "--qsar_pilot",
                 "--input_file", "/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/osimertinib_main_smiles.csv",
                 "--seed", "42",
-                "--model","all",
-                "--n_clusters","3"
+                "--model", "all",
+                "--n_clusters", "3"
+            ]
+        },
+        {
+            "name": "Attach to Remote",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "remote.server.com",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/path/to/remote/workspace"
+                }
             ]
         }
-
     ]
 }

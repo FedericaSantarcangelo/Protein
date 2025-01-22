@@ -19,6 +19,7 @@ from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.data_handling import prepare_data
 from utils.args import data_cleaning_args, file_args, reducer_args, qsar_args
 from utils.file_utils import load_file, process_directory, drop_columns, add_protein_family
+
 conf_path = os.getcwd()
 sys.path.append(conf_path)
 
@@ -27,24 +28,24 @@ def parser_args() -> argparse.Namespace:
     Parse the arguments
     :return: the arguments
     """
-    parser = argparse.ArgumentParser(description = 'Data Cleaning')
+    parser = argparse.ArgumentParser(description='Data Cleaning')
     file_args(parser)
     data_cleaning_args(parser)
-    parser.add_argument('--path_db', type = str, default = '/home/federica/LAB2/chembl33_20240216',
-                        help = 'Specify the path of the database')
+    parser.add_argument('--path_db', type=str, default='/home/federica/LAB2/chembl33_20240216',
+                        help='Specify the path of the database')
     reducer_args(parser)
     parser.add_argument('--qsar_pilot', action='store_true', help='Run QSAR Pilot analysis with predefined molecules')
     parser.add_argument('--input_file', type=str, help='Path to the input file with precomputed descriptors')
     qsar_args(parser)
     return parser.parse_args()
-        
+
 def process_data(cleaner, args) -> pd.DataFrame:
     """
     Workflow for data processing before model training
     :return: the processed dataframe
     """
     timestamp = datetime.now().strftime('%Y%m%d%H%M')
-    name = 'data_'+timestamp+'/'
+    name = 'data_' + timestamp + '/'
     args.path_output = os.path.join(args.path_output, name)
     if not os.path.exists(args.path_output):
         os.makedirs(args.path_output)
@@ -72,20 +73,16 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     except pd.errors.ParserError:
         print(f"Error: The file {input_file} could not be parsed.")
         return
-
     df = process_molecules_and_calculate_descriptors(df)
     df = prepare_data(df)
-
     numerical_data = df.select_dtypes(include=[np.number])
     numerical_data = numerical_data.dropna(axis=1, how='any')
     numerical_data = numerical_data.loc[:, numerical_data.std() > 0]
     numerical_data = numerical_data.drop(columns=['Standard Value', 'Log Standard Value', 'Root Squared Standard Value'])
-
     reducer = DimensionalityReducer(args)
     results = reducer.fit_transform(numerical_data, df['Log Standard Value'])
     X = results['reduced_data']
     y = df['Log Standard Value']
-
     model_trainer = QSARModelTrainer(args)
     model_trainer.train_and_evaluate(X, y)
     return results

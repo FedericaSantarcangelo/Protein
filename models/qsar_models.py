@@ -4,9 +4,10 @@
 import pandas as pd
 import os
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
+from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor, GradientBoostingRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
@@ -32,6 +33,10 @@ class QSARModelTrainer:
             self._svr_regressor(X_train, y_train, X_test, y_test)
         if self.args.model in ['xgb_regressor', 'all']:
             self._xgb_regressor(X_train, y_train, X_test, y_test)
+        if self.args.model in ['gbr_regressor', 'all']:
+            self._gbr_regressor(X_train, y_train, X_test, y_test)
+        if self.args.model in ['knn_regressor', 'all']:
+            self._knn_regressor(X_train, y_train, X_test, y_test)
 
     def _evaluate_model(self, model, X_test, y_test):
         """
@@ -147,6 +152,45 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'xgb_regressor_results.csv')
+
+    def _gbr_regressor(self, X_train, y_train, X_test, y_test):
+        """
+        Train and evaluate a Gradient Boosting Regressor using GridSearchCV
+        """
+        param_grid = {
+            'n_estimators': [50, 100, 200],
+            'learning_rate': [0.01, 0.05, 0.1],
+            'max_depth': [3, 5, 7],
+            'subsample': [0.7, 0.8, 0.9]
+        }
+        grid_search = GridSearchCV(GradientBoostingRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
+        grid_search.fit(X_train, y_train)
+
+        best_model = grid_search.best_estimator_
+        results = self._evaluate_model(best_model, X_test, y_test)
+        results['Model'] = 'Gradient Boosting'
+        results['Best Params'] = grid_search.best_params_
+
+        self._save_results(results, 'gbr_regressor_results.csv')
+
+    def _knn_regressor(self, X_train, y_train, X_test, y_test):
+        """
+        Train and evaluate a K-Neighbors Regressor using GridSearchCV
+        """
+        param_grid = {
+            'n_neighbors': [3, 5, 7, 9],
+            'weights': ['uniform', 'distance'],
+            'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
+        }
+        grid_search = GridSearchCV(KNeighborsRegressor(), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
+        grid_search.fit(X_train, y_train)
+
+        best_model = grid_search.best_estimator_
+        results = self._evaluate_model(best_model, X_test, y_test)
+        results['Model'] = 'K-Neighbors'
+        results['Best Params'] = grid_search.best_params_
+
+        self._save_results(results, 'knn_regressor_results.csv')
 
     def _save_results(self, results, filename):
         """
