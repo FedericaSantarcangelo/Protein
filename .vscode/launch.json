@@ -47,6 +47,21 @@
                     "remoteRoot": "/path/to/remote/workspace"
                 }
             ]
+        },
+        {
+            "name": "Slurm Job",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--qsar_pilot",
+                "--input_file", "/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/osimertinib_main_smiles.csv",
+                "--seed", "42",
+                "--model", "all",
+                "--n_clusters", "3"
+            ],
+            "preLaunchTask": "Run Slurm Job"
         }
     ]
 }

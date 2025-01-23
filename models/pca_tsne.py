@@ -4,36 +4,37 @@
 import os
 import pandas as pd
 import numpy as np
-from argparse import Namespace, ArgumentParser
-from utils.args import reducer_args
+import warnings
+from argparse import Namespace
+import warnings
 from models.plot import plot_tsne, plot_kmeans_clusters, create_cumulative_variance_plot, create_individual_variance_plot, plot_similarity_matrix
 from models.plot import save_loading_scores, elbow, silhouette, save_cluster_labels, plot_pls_results
 from sklearn.decomposition import PCA
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.manifold import TSNE
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler,RobustScaler, MinMaxScaler 
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
-import seaborn as sns
-import matplotlib.pyplot as plt
 from utils.data_handling import select_optimal_clusters
 from dataset.processing import remove_highly_correlated_features, remove_zero_variance_features
-from sklearn.model_selection import LeaveOneOut
+from sklearn.model_selection import LeaveOneOut, KFold 
 from sklearn.metrics import r2_score
 
 
-def get_parser_args():
-    parser = ArgumentParser(description='QSAR Pilot Study')
-    reducer_args(parser)
-    return parser
+def find_intersection(r2_scores, q2_scores):
+    """Find the intersection point of R2 and Q2 scores."""
+    for i in range(1, len(r2_scores)):
+        if (r2_scores[i-1] <= q2_scores[i-1] and r2_scores[i] >= q2_scores[i]) or (r2_scores[i-1] >= q2_scores[i-1] and r2_scores[i] <= q2_scores[i]):
+            return i
+    return len(r2_scores)
 
-class DimensionalityReducer():
+class DimensionalityReducer:
     def __init__(self, args: Namespace):
         self.args = args
         self.similarity = cosine_similarity if self.args.similarities == 'cosine' else euclidean_distances
         self.result_dir = self.args.path_pca_tsne
         os.makedirs(self.result_dir, exist_ok=True)
-        self.scaler = StandardScaler()
+        self.scaler = MinMaxScaler()
         self.scaled_data = None
         self.similarity_matrix = None
 
@@ -59,38 +60,44 @@ class DimensionalityReducer():
         r2_scores = []
         q2_scores = []
         components_range = range(1, max_components + 1)
+        kf = KFold(n_splits=10, shuffle=True, random_state=self.args.seed)
         for n_components in components_range:
-            pls = PLSRegression(n_components=n_components)
-            pls.fit(data, target)
-            r2 = pls.score(data, target)
-            r2_scores.append(r2)
-            loo = LeaveOneOut()
-            y_pred = np.zeros(target.shape)
-            for train_index, test_index in loo.split(data):
-                pls.fit(data[train_index], target[train_index])
-                y_pred[test_index] = pls.predict(data[test_index]).ravel()
-            q2 = r2_score(target, y_pred)
-            q2_scores.append(q2)
+            r2_fold_scores = []
+            q2_fold_scores = []
+            for train_index, test_index in kf.split(data):
+                X_train, X_test = data[train_index], data[test_index]
+                y_train, y_test = target[train_index], target[test_index]
+                pls = PLSRegression(n_components=n_components)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    pls.fit(X_train, y_train)
+                y_pred = pls.predict(X_test)
+                r2 = r2_score(y_test, y_pred)
+                r2_fold_scores.append(r2)
+                loo = LeaveOneOut()
+                y_pred_loo = np.zeros(len(y_train))
+                for loo_train_index, loo_test_index in loo.split(X_train):
+                    pls.fit(X_train[loo_train_index], y_train[loo_train_index])
+                    y_pred_loo[loo_test_index] = pls.predict(X_train[loo_test_index])
+                q2 = 1 - (sum((y_train - y_pred_loo) ** 2) / sum((y_train - np.mean(y_train)) ** 2))
+                q2_fold_scores.append(q2)
+            r2_scores.append(np.mean(r2_fold_scores))
+            q2_scores.append(np.mean(q2_fold_scores))
+            intersection_point = find_intersection(r2_scores, q2_scores)
+            if intersection_point < len(r2_scores):
+                break
+        components_range = range(1, len(r2_scores) + 1) 
         plot_pls_results(components_range, r2_scores, q2_scores, self.result_dir)
         optimal_components = self.select_optimal_components(r2_scores, q2_scores, max_components)
-        print(f'Optimal number of components: {optimal_components}')
-        pls_optimal = PLSRegression(n_components=optimal_components)
-        pls_optimal.fit(data, target)
-        reduced_data = pls_optimal.transform(data)
+        pls = PLSRegression(n_components=optimal_components)
+        pls.fit(data, target)
+        reduced_data = pls.transform(data)
         return reduced_data
 
     def select_optimal_components(self, r2_scores, q2_scores, max_components):
-        """Select the optimal number of components based on R2 and Q2 scores."""
-        r2_threshold = 0.95
-        q2_threshold_stable = -0.1
-        optimal_range = []
-        for i in range(1, len(r2_scores) + 1):
-            if r2_scores[i-1] >= r2_threshold and (q2_scores[i-1] >= q2_threshold_stable or (i > 1 and q2_scores[i-1] >= q2_scores[i-2])):
-                optimal_range.append(i)
-        if not optimal_range:
-            optimal_range = [i for i in range(1, len(r2_scores) + 1) if r2_scores[i-1] >= r2_threshold]
-        optimal_component = optimal_range[-1] if optimal_range else 1
-        return min(optimal_component, max_components)
+        """Select the optimal number of components based on the intersection of R2 and Q2 scores."""
+        intersection_point = find_intersection(r2_scores, q2_scores)
+        return min(intersection_point, max_components)
 
     def fit_transform(self, data, log):
         """Fit and transform the data using PCA and PLS, and perform clustering and t-SNE."""
@@ -112,8 +119,8 @@ class DimensionalityReducer():
         create_cumulative_variance_plot(cumulative_variance, self.result_dir, 'standard_scaler')
         create_individual_variance_plot(explained_variance, self.result_dir, 'standard_scaler')
         results['reduced_data'] = reduced_data
-        inertia = elbow(reduced_data, 10, self.result_dir, self.args.seed)
-        silhouette_scores = silhouette(reduced_data, 10, self.result_dir, self.args.seed)
+        inertia = elbow(reduced_data, optimal_components, self.result_dir, self.args.seed)
+        silhouette_scores = silhouette(reduced_data, optimal_components, self.result_dir, self.args.seed)
         optimal_clusters = select_optimal_clusters(inertia, silhouette_scores)
         labels = self.perform_kmeans(reduced_data, optimal_clusters)
         self.perform_tsne(reduced_data, labels)

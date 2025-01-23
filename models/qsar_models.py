@@ -91,14 +91,14 @@ class QSARModelTrainer:
 
     def _mlp_regressor(self, X_train, y_train, X_test, y_test):
         """
-        Train and evaluate a Multi-Layer Perceptron regressor using GridSearchCV
+        Train and evaluate a Multi-Layer Perceptron regressor using GridSearchCV with dropout
         """
+
         param_grid = {
             'hidden_layer_sizes': [(50,), (100,), (100, 50)],
             'activation': ['relu', 'tanh', 'logistic'],
-            'solver': ['adam'],
             'alpha': [0.001, 0.01, 0.1, 1.0],
-            'learning_rate': ['constant', 'adaptive']
+            'learning_rate': ['constant', 'adaptive'],
         }
         grid_search = GridSearchCV(MLPRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
         grid_search.fit(X_train, y_train)
@@ -109,6 +109,7 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'mlp_regressor_results.csv')
+
 
     def _svr_regressor(self, X_train, y_train, X_test, y_test):
         """

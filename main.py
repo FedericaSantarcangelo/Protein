@@ -62,23 +62,11 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     """
     Run the QSAR pilot study
     """
-    try:
-        df = pd.read_csv(input_file)
-    except FileNotFoundError:
-        print(f"Error: The file {input_file} was not found.")
-        return
-    except pd.errors.EmptyDataError:
-        print(f"Error: The file {input_file} is empty.")
-        return
-    except pd.errors.ParserError:
-        print(f"Error: The file {input_file} could not be parsed.")
-        return
+    df = pd.read_csv(input_file)
     df = process_molecules_and_calculate_descriptors(df)
     df = prepare_data(df)
     numerical_data = df.select_dtypes(include=[np.number])
-    numerical_data = numerical_data.dropna(axis=1, how='any')
-    numerical_data = numerical_data.loc[:, numerical_data.std() > 0]
-    numerical_data = numerical_data.drop(columns=['Standard Value', 'Log Standard Value', 'Root Squared Standard Value'])
+    numerical_data = numerical_data.drop(columns=['Standard Value', 'Log Standard Value'])
     reducer = DimensionalityReducer(args)
     results = reducer.fit_transform(numerical_data, df['Log Standard Value'])
     X = results['reduced_data']

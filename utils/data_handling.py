@@ -157,15 +157,10 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
 
     if (df_prepared['Standard Value'] <= 0).any():
         raise ValueError("Standard Value with negative value. Cannot compute -log.")
-    df_prepared['Log Standard Value'] = -np.log10(df_prepared['Standard Value'])
-    df_prepared['Root Squared Standard Value'] = np.sqrt(df_prepared['Standard Value'])
-
-    Q1 = df_prepared['Log Standard Value'].quantile(0.25)
-    Q3 = df_prepared['Log Standard Value'].quantile(0.75)
-    IQR = Q3 - Q1
-    outliers = (df_prepared['Log Standard Value'] < (Q1 - 1.5 * IQR)) | (df_prepared['Log Standard Value'] > (Q3 + 1.5 * IQR))
-    df_prepared = df_prepared[~outliers]
-    return df_prepared
+    data_no_outliers = df_prepared[df_prepared['Standard Value'] <=362.86]
+    data_no_outliers = data_no_outliers.copy()
+    data_no_outliers.loc[:, 'Log Standard Value'] = np.log(data_no_outliers['Standard Value'] + 1)
+    return data_no_outliers
 
 def select_optimal_clusters(inertia_scores, silhouette_scores):
     """

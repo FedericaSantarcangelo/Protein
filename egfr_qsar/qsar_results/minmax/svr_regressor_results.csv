@@ -1,0 +1,2 @@
+MSE,R2,MAE,Model,Best Params
+0.42811801034330704,0.812280844625799,0.49404864543232374,SVR,"{'C': 0.1, 'epsilon': 0.01, 'gamma': 'scale', 'kernel': 'linear'}"
