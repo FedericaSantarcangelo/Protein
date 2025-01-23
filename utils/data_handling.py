@@ -156,8 +156,12 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     df_prepared = df.drop(columns=['Smiles (RDKit Mol)', 'Document ChEMBL ID'])
 
     if (df_prepared['Standard Value'] <= 0).any():
-        raise ValueError("Standard Value with negative value. Cannot compute -log.")
-    data_no_outliers = df_prepared[df_prepared['Standard Value'] <=362.86]
+        raise ValueError("Standard Value with negative value. Cannot compute log.")
+    IQR = df_prepared['Standard Value'].quantile(0.75) - df_prepared['Standard Value'].quantile(0.25)
+    lower_bound = df_prepared['Standard Value'].quantile(0.25) - 1.5 * IQR
+    upper_bound = df_prepared['Standard Value'].quantile(0.75) + 1.5 * IQR
+    data_no_outliers = df_prepared[df_prepared['Standard Value'] <= upper_bound]
+    
     data_no_outliers = data_no_outliers.copy()
     data_no_outliers.loc[:, 'Log Standard Value'] = np.log(data_no_outliers['Standard Value'] + 1)
     return data_no_outliers

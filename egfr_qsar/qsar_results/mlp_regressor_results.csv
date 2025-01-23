@@ -1,2 +1,2 @@
 MSE,R2,MAE,Model,Best Params
-0.7530003941946048,0.7914103340675631,0.7721493015324369,MLP,"{'activation': 'logistic', 'alpha': 0.001, 'hidden_layer_sizes': (50,), 'learning_rate': 'constant'}"
+0.13275939667112968,0.9632241385070696,0.30293377109091746,MLP,"{'activation': 'logistic', 'alpha': 1.0, 'hidden_layer_sizes': (100,), 'learning_rate': 'constant'}"
