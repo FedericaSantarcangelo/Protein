@@ -14,7 +14,6 @@ from datetime import datetime
 import logging
 from dataset.preparation import Cleaner
 from models.pca_tsne import DimensionalityReducer
-from models.qsar_models import QSARModelTrainer
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.data_handling import prepare_data
 from utils.args import data_cleaning_args, file_args, reducer_args, qsar_args
@@ -67,12 +66,10 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     df = prepare_data(df)
     numerical_data = df.select_dtypes(include=[np.number])
     numerical_data = numerical_data.drop(columns=['Standard Value', 'Log Standard Value'])
+    numerical_data = numerical_data.fillna(0)
     reducer = DimensionalityReducer(args)
     results = reducer.fit_transform(numerical_data, df['Log Standard Value'])
-    X = results['reduced_data']
-    y = df['Log Standard Value']
-    model_trainer = QSARModelTrainer(args)
-    model_trainer.train_and_evaluate(X, y)
+
     return results
 
 def main():

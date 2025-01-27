@@ -9,6 +9,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
+from models.plot import plot_and_save_r2_q2_scores
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 class QSARModelTrainer:
@@ -16,6 +17,8 @@ class QSARModelTrainer:
         self.args = args
         self.result_dir = self.args.path_qsar
         os.makedirs(self.result_dir, exist_ok=True)
+        self.r2_scores = []
+        self.q2_scores = []
 
     def train_and_evaluate(self, X, y):
         """
@@ -49,6 +52,17 @@ class QSARModelTrainer:
         mae = mean_absolute_error(y_test, y_pred)
     
         return {'MSE': mse, 'R2': r2, 'MAE': mae}
+    
+    def _save_r2_q2_scores(self, r2_scores, q2_scores, model_name):
+        """
+        Save the R2 and Q2 scores to a CSV file
+        """
+        scores_df = pd.DataFrame({'R2': r2_scores, 'Q2': q2_scores})
+        scores_path = os.path.join(self.result_dir, f'{model_name}_r2_q2_scores.csv')
+        scores_df.to_csv(scores_path, index=False)
+
+        plot_and_save_r2_q2_scores(r2_scores, q2_scores, model_name, self.result_dir)
+
 
     def _rf_regressor(self, X_train, y_train, X_test, y_test):
         """
@@ -70,6 +84,7 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'rf_regressor_results.csv')
+        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'rf_regressor')
 
     def _ab_regressor(self, X_train, y_train, X_test, y_test):
         """
@@ -88,6 +103,7 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'ab_regressor_results.csv')
+        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'ab_regressor')
 
     def _mlp_regressor(self, X_train, y_train, X_test, y_test):
         """
@@ -109,6 +125,7 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'mlp_regressor_results.csv')
+        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'mlp_regressor')
 
 
     def _svr_regressor(self, X_train, y_train, X_test, y_test):
@@ -130,6 +147,7 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'svr_regressor_results.csv')
+        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'svr_regressor')
 
     def _xgb_regressor(self, X_train, y_train, X_test, y_test):
         """
@@ -153,6 +171,7 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'xgb_regressor_results.csv')
+        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'xgb_regressor')
 
     def _gbr_regressor(self, X_train, y_train, X_test, y_test):
         """
@@ -173,6 +192,7 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'gbr_regressor_results.csv')
+        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'gbr_regressor')
 
     def _knn_regressor(self, X_train, y_train, X_test, y_test):
         """
@@ -192,6 +212,7 @@ class QSARModelTrainer:
         results['Best Params'] = grid_search.best_params_
 
         self._save_results(results, 'knn_regressor_results.csv')
+        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'knn_regressor')
 
     def _save_results(self, results, filename):
         """

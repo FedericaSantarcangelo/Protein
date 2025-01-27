@@ -126,3 +126,23 @@ def plot_pls_results(components_range, r2_scores, q2_scores, result_dir):
     plt.tight_layout()
     plt.savefig(os.path.join(result_dir, 'r2_q2_vs_components.png'))
     plt.close()
+
+def plot_and_save_r2_q2_scores(r2_scores, q2_scores, model_name, result_dir):
+    """
+    Plot and save the R2 and Q2 scores.
+    """
+    components_range = range(1, len(r2_scores) + 1)
+    plt.figure(figsize=(10, 6))
+    plt.plot(components_range, r2_scores, label='R2', marker='o', color='blue')
+    plt.plot(components_range, q2_scores, label='Q2', marker='o', color='red')
+    plt.xlabel('Number of Components')
+    plt.ylabel('Score')
+    plt.title(f'R2 vs Q2 for {model_name}')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    
+    # Save the plot
+    plot_path = os.path.join(result_dir, f'{model_name}_r2_q2_plot.png')
+    plt.savefig(plot_path)
+    plt.close()
