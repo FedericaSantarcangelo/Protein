@@ -1,2 +1,0 @@
-MSE,R2,MAE,Model,Best Params
-1.3103598696639311,0.6370154257929481,0.9784325927030723,AdaBoost,"{'learning_rate': 0.01, 'n_estimators': 200}"

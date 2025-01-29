@@ -68,9 +68,9 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     numerical_data = numerical_data.drop(columns=['Standard Value', 'Log Standard Value'])
     numerical_data = numerical_data.fillna(0)
     reducer = DimensionalityReducer(args)
-    results = reducer.fit_transform(numerical_data, df['Log Standard Value'])
+    reducer.fit_transform(numerical_data, df['Log Standard Value'])
 
-    return results
+    return 1
 
 def main():
     args = parser_args()

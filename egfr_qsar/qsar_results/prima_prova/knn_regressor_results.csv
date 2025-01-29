@@ -1,2 +1,0 @@
-MSE,R2,MAE,Model,Best Params
-1.4226993209898475,0.6058961212032479,1.0901944664177043,K-Neighbors,"{'algorithm': 'auto', 'n_neighbors': 9, 'weights': 'uniform'}"

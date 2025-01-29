@@ -1,223 +1,88 @@
-""" 
-@Author: Federica Santarcangelo
-"""
 import pandas as pd
+import numpy as np
 import os
-from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor, GradientBoostingRegressor
+from sklearn.cross_decomposition import PLSRegression
 from sklearn.neural_network import MLPRegressor
+from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
-from models.plot import plot_and_save_r2_q2_scores
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.metrics import r2_score
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 class QSARModelTrainer:
     def __init__(self, args):
         self.args = args
         self.result_dir = self.args.path_qsar
         os.makedirs(self.result_dir, exist_ok=True)
-        self.r2_scores = []
-        self.q2_scores = []
+        self.best_model = None
 
-    def train_and_evaluate(self, X, y):
+    def calculate_q2(self, model, X_test, y_test):
+        """ Calcola il Q² sul test set senza riaddestrare il modello """
+        y_pred = model.predict(X_test)  # Usa il modello già addestrato
+        numerator = np.sum((y_test - y_pred) ** 2)
+        denominator = np.sum((y_test - np.mean(y_test)) ** 2)
+        q2 = 1 - (numerator / denominator)
+    
+        return q2
+
+
+    def train_and_evaluate(self, X, y, component):
         """
-        Train and evaluate the models
+        Train and evaluate multiple regression models
         """
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=self.args.seed)
+        models = {
+            'PLS': (PLSRegression(), {'n_components': range(1, min(X_train.shape[1], len(X_train)) + 1)}),
+            'Random Forest': (RandomForestRegressor(random_state=self.args.seed), {'n_estimators': [100, 200], 'max_depth': [None, 10, 20]}),
+            'AdaBoost': (AdaBoostRegressor(random_state=self.args.seed), {'n_estimators': [50, 100]}),
+            'Gradient Boosting': (GradientBoostingRegressor(random_state=self.args.seed), {'n_estimators': [100, 200], 'learning_rate': [0.1, 0.01]}),
+            'MLP': (MLPRegressor(random_state=self.args.seed), {'hidden_layer_sizes': [(100,), (100, 100)], 'alpha': [0.0001, 0.001]}),
+            'SVR': (SVR(), {'C': [0.1, 1, 10], 'gamma': ['scale', 'auto']}),
+            'KNN': (KNeighborsRegressor(), {'n_neighbors': [3, 5, 7]}),
+            'XGBoost': (XGBRegressor(random_state=self.args.seed), {'n_estimators': [100, 200], 'max_depth': [3, 6, 9]})
+        }
 
-        if self.args.model in ['rf_regressor', 'all']:
-            self._rf_regressor(X_train, y_train, X_test, y_test)
-        if self.args.model in ['ab_regressor', 'all']:
-            self._ab_regressor(X_train, y_train, X_test, y_test)
-        if self.args.model in ['mlp_regressor', 'all']:
-            self._mlp_regressor(X_train, y_train, X_test, y_test)
-        if self.args.model in ['svr_regressor', 'all']:
-            self._svr_regressor(X_train, y_train, X_test, y_test)
-        if self.args.model in ['xgb_regressor', 'all']:
-            self._xgb_regressor(X_train, y_train, X_test, y_test)
-        if self.args.model in ['gbr_regressor', 'all']:
-            self._gbr_regressor(X_train, y_train, X_test, y_test)
-        if self.args.model in ['knn_regressor', 'all']:
-            self._knn_regressor(X_train, y_train, X_test, y_test)
+        for model_name, (model, param_grid) in models.items():
+            grid_search = GridSearchCV(model, param_grid, cv=5, scoring='r2',n_jobs=-1)
+            grid_search.fit(X_train, y_train)
+            best_model = grid_search.best_estimator_
+            best_params = grid_search.best_params_
 
-    def _evaluate_model(self, model, X_test, y_test):
-        """
-        Evaluate the model using multiple metrics
-        """
-        y_pred = model.predict(X_test)
+            y_train_pred = best_model.predict(X_train)
+            r2_train = r2_score(y_train, y_train_pred)
+            q2 = self.calculate_q2(best_model, X_test, y_test)
+
+            self._save_results(best_model, X_test, y_test, model_name, component, best_params, r2_train, q2)
     
+
+    def _save_results(self, model, X_test, y_test, model_name, component, params, r2, q2):
+        """
+        Save the evaluation metrics and best parameters to a CSV file
+        """
+        y_pred = model.predict(X_test).ravel()
         mse = mean_squared_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
         mae = mean_absolute_error(y_test, y_pred)
-    
-        return {'MSE': mse, 'R2': r2, 'MAE': mae}
-    
-    def _save_r2_q2_scores(self, r2_scores, q2_scores, model_name):
-        """
-        Save the R2 and Q2 scores to a CSV file
-        """
-        scores_df = pd.DataFrame({'R2': r2_scores, 'Q2': q2_scores})
-        scores_path = os.path.join(self.result_dir, f'{model_name}_r2_q2_scores.csv')
-        scores_df.to_csv(scores_path, index=False)
 
-        plot_and_save_r2_q2_scores(r2_scores, q2_scores, model_name, self.result_dir)
-
-
-    def _rf_regressor(self, X_train, y_train, X_test, y_test):
-        """
-        Train and evaluate a Random Forest regressor using GridSearchCV
-        """
-        param_grid = {
-            'n_estimators': [50, 100, 200],
-            'max_features': ['sqrt', 'log2', None],
-            'min_samples_split': [2, 5, 10],
-            'min_samples_leaf': [1, 2, 4],
-            'max_depth': [None, 10, 20, 30]
+        results = {
+            'Model': model_name,
+            'PC': component,
+            'MSE': mse,
+            'R2': r2,
+            'Q2': q2,
+            'MAE': mae,
+            'Best Params': params
         }
-        grid_search = GridSearchCV(RandomForestRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
+        results_path = os.path.join(self.result_dir, f'{model_name.lower().replace(" ", "_")}_results.csv')
 
-        best_model = grid_search.best_estimator_
-        results = self._evaluate_model(best_model, X_test, y_test)
-        results['Model'] = 'Random Forest'
-        results['Best Params'] = grid_search.best_params_
+        if os.path.exists(results_path):
+            results_df = pd.read_csv(results_path)
+            results_df = pd.concat([results_df, pd.DataFrame([results])], ignore_index=True)
+        else:
+            results_df = pd.DataFrame([results])
 
-        self._save_results(results, 'rf_regressor_results.csv')
-        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'rf_regressor')
-
-    def _ab_regressor(self, X_train, y_train, X_test, y_test):
-        """
-        Train and evaluate an AdaBoost regressor using GridSearchCV
-        """
-        param_grid = {
-            'n_estimators': [50, 100, 200],
-            'learning_rate': [0.01, 0.1, 0.2]
-        }
-        grid_search = GridSearchCV(AdaBoostRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-
-        best_model = grid_search.best_estimator_
-        results = self._evaluate_model(best_model, X_test, y_test)
-        results['Model'] = 'AdaBoost'
-        results['Best Params'] = grid_search.best_params_
-
-        self._save_results(results, 'ab_regressor_results.csv')
-        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'ab_regressor')
-
-    def _mlp_regressor(self, X_train, y_train, X_test, y_test):
-        """
-        Train and evaluate a Multi-Layer Perceptron regressor using GridSearchCV with dropout
-        """
-
-        param_grid = {
-            'hidden_layer_sizes': [(50,), (100,), (100, 50)],
-            'activation': ['relu', 'tanh', 'logistic'],
-            'alpha': [0.001, 0.01, 0.1, 1.0],
-            'learning_rate': ['constant', 'adaptive'],
-        }
-        grid_search = GridSearchCV(MLPRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-
-        best_model = grid_search.best_estimator_
-        results = self._evaluate_model(best_model, X_test, y_test)
-        results['Model'] = 'MLP'
-        results['Best Params'] = grid_search.best_params_
-
-        self._save_results(results, 'mlp_regressor_results.csv')
-        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'mlp_regressor')
-
-
-    def _svr_regressor(self, X_train, y_train, X_test, y_test):
-        """
-        Train and evaluate a Support Vector Regressor using GridSearchCV
-        """
-        param_grid = {
-            'C': [0.1, 1, 10],
-            'epsilon': [0.01, 0.05, 0.1],
-            'kernel': ['linear', 'rbf', 'sigmoid'],
-            'gamma': ['scale', 'auto']
-        }
-        grid_search = GridSearchCV(SVR(), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-
-        best_model = grid_search.best_estimator_
-        results = self._evaluate_model(best_model, X_test, y_test)
-        results['Model'] = 'SVR'
-        results['Best Params'] = grid_search.best_params_
-
-        self._save_results(results, 'svr_regressor_results.csv')
-        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'svr_regressor')
-
-    def _xgb_regressor(self, X_train, y_train, X_test, y_test):
-        """
-        Train and evaluate an XGBoost regressor using GridSearchCV
-        """
-        param_grid = {
-            'n_estimators': [50, 100, 200],
-            'max_depth': [3, 5, 7, 10],
-            'learning_rate': [0.01, 0.05, 0.1],
-            'subsample': [0.7, 0.8, 0.9],
-            'colsample_bytree': [0.6, 0.8, 1.0],
-            'gamma': [0, 0.1, 0.2],
-            'min_child_weight': [1, 2, 3]
-        }
-        grid_search = GridSearchCV(XGBRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-
-        best_model = grid_search.best_estimator_
-        results = self._evaluate_model(best_model, X_test, y_test)
-        results['Model'] = 'XGBoost'
-        results['Best Params'] = grid_search.best_params_
-
-        self._save_results(results, 'xgb_regressor_results.csv')
-        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'xgb_regressor')
-
-    def _gbr_regressor(self, X_train, y_train, X_test, y_test):
-        """
-        Train and evaluate a Gradient Boosting Regressor using GridSearchCV
-        """
-        param_grid = {
-            'n_estimators': [50, 100, 200],
-            'learning_rate': [0.01, 0.05, 0.1],
-            'max_depth': [3, 5, 7],
-            'subsample': [0.7, 0.8, 0.9]
-        }
-        grid_search = GridSearchCV(GradientBoostingRegressor(random_state=self.args.seed), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-
-        best_model = grid_search.best_estimator_
-        results = self._evaluate_model(best_model, X_test, y_test)
-        results['Model'] = 'Gradient Boosting'
-        results['Best Params'] = grid_search.best_params_
-
-        self._save_results(results, 'gbr_regressor_results.csv')
-        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'gbr_regressor')
-
-    def _knn_regressor(self, X_train, y_train, X_test, y_test):
-        """
-        Train and evaluate a K-Neighbors Regressor using GridSearchCV
-        """
-        param_grid = {
-            'n_neighbors': [3, 5, 7, 9],
-            'weights': ['uniform', 'distance'],
-            'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
-        }
-        grid_search = GridSearchCV(KNeighborsRegressor(), param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
-        grid_search.fit(X_train, y_train)
-
-        best_model = grid_search.best_estimator_
-        results = self._evaluate_model(best_model, X_test, y_test)
-        results['Model'] = 'K-Neighbors'
-        results['Best Params'] = grid_search.best_params_
-
-        self._save_results(results, 'knn_regressor_results.csv')
-        self._save_r2_q2_scores(self.r2_scores, self.q2_scores, 'knn_regressor')
-
-    def _save_results(self, results, filename):
-        """
-        Save the results to a CSV file
-        """
-        results_df = pd.DataFrame([results])
-        results_path = os.path.join(self.result_dir, filename)
         results_df.to_csv(results_path, index=False)
+        return results

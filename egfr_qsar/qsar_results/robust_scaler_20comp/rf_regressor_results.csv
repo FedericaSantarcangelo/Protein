@@ -1,2 +1,0 @@
-MSE,R2,MAE,Model,Best Params
-1.2422236595432163,0.45531565941758045,0.7872219687561516,Random Forest,"{'max_depth': None, 'max_features': None, 'min_samples_leaf': 2, 'min_samples_split': 2, 'n_estimators': 100}"

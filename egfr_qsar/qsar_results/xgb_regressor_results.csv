@@ -1,2 +1,0 @@
-MSE,R2,MAE,Model,Best Params
-2.3226587530983327,0.21462965694658764,1.2249387201758937,XGBoost,"{'colsample_bytree': 1.0, 'gamma': 0.1, 'learning_rate': 0.01, 'max_depth': 3, 'min_child_weight': 3, 'n_estimators': 50, 'subsample': 0.9}"

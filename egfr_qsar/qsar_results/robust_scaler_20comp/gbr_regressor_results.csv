@@ -1,2 +1,0 @@
-MSE,R2,MAE,Model,Best Params
-1.1522271142248932,0.49477691791545186,0.7421459234662149,Gradient Boosting,"{'learning_rate': 0.1, 'max_depth': 3, 'n_estimators': 200, 'subsample': 0.9}"

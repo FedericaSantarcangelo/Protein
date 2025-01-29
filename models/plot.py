@@ -114,35 +114,35 @@ def create_individual_variance_plot(explained_variance, result_dir, scaler_name)
     plt.savefig(os.path.join(result_dir, f'{scaler_name}_explained_variance.png'), bbox_inches='tight')
     plt.close()
 
-def plot_pls_results(components_range, r2_scores, q2_scores, result_dir):
-    plt.figure(figsize=(10, 6))
-    plt.plot(components_range, r2_scores, label='R2', marker='o', color='blue')
-    plt.plot(components_range, q2_scores, label='Q2 (LOO)', marker='o', color='red')
-    plt.xlabel('Number of PLS Components')
-    plt.ylabel('Score')
-    plt.title('R2 vs Q2 with Increasing PLS Components')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(os.path.join(result_dir, 'r2_q2_vs_components.png'))
-    plt.close()
+def find_intersection(r2_scores, q2_scores):
+    """Find the intersection point of R2 and Q2 scores."""
+    for i in range(1, len(r2_scores)):
+        if (r2_scores[i-1] <= q2_scores[i-1] and r2_scores[i] >= q2_scores[i]) or (r2_scores[i-1] >= q2_scores[i-1] and r2_scores[i] <= q2_scores[i]):
+            return i
+    return len(r2_scores)
 
-def plot_and_save_r2_q2_scores(r2_scores, q2_scores, model_name, result_dir):
+
+def plot_results(results_df, result_dir, filename='model_scores.png'):
     """
-    Plot and save the R2 and Q2 scores.
+    Plot dei risultati (R² e Q²) per ciascun modello e salva l'immagine.
     """
-    components_range = range(1, len(r2_scores) + 1)
+    results_df = results_df.sort_values(by='R2', ascending=False)
+    models = results_df['Model']
+    r2_scores = results_df['R2']
+    q2_scores = results_df['Q2']
+
+    valid_indices = ~q2_scores.isnull()
+    models = models[valid_indices]
+    r2_scores = r2_scores[valid_indices]
+    q2_scores = q2_scores[valid_indices]
+
     plt.figure(figsize=(10, 6))
-    plt.plot(components_range, r2_scores, label='R2', marker='o', color='blue')
-    plt.plot(components_range, q2_scores, label='Q2', marker='o', color='red')
-    plt.xlabel('Number of Components')
-    plt.ylabel('Score')
-    plt.title(f'R2 vs Q2 for {model_name}')
+    plt.barh(models, r2_scores, color='blue', alpha=0.7, label='R²')
+    plt.barh(models, q2_scores, color='orange', alpha=0.7, label='Q²')
+    plt.xlabel('Score')
+    plt.ylabel('Models')
+    plt.title('R² e Q² per Modello')
     plt.legend()
-    plt.grid(True)
     plt.tight_layout()
-    
-    # Save the plot
-    plot_path = os.path.join(result_dir, f'{model_name}_r2_q2_plot.png')
-    plt.savefig(plot_path)
+    plt.savefig(os.path.join(result_dir, filename), bbox_inches='tight')
     plt.close()
