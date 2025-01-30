@@ -37,29 +37,32 @@ class DimensionalityReducer:
         loadings = pca.components_.T
         return pd.DataFrame(loadings, index=feature_names, columns=[f"PC{i+1}" for i in range(loadings.shape[1])])
 
-    def perform_regression(self, data, target, component):
-        """Perform regression using multiple models and return the reduced data."""
-        trainer = QSARModelTrainer(self.args)
-        trainer.train_and_evaluate(data, target, component)
-    
-    def fit_transform(self, data, log):
+    def fit_transform(self, data, log, X_test, y_test):
         """Fit and transform the data using PCA, regression, clustering, and t-SNE."""
         data['ID'] = np.arange(len(data))
 
         self.scaled_data = self.scaler.fit_transform(data)
+        scaled_y = self.scaler.fit_transform(X_test)
+        feature_names_y = X_test.columns[:-1]
         feature_names = data.columns[:-1]
         self.scaled_data, feature_names = remove_zero_variance_features(self.scaled_data, feature_names)
         self.scaled_data, feature_names = remove_highly_correlated_features(self.scaled_data, feature_names)
+
+        scaled_y, feature_names_y = remove_zero_variance_features(scaled_y, feature_names_y)
+        scaled_y, feature_names_y = remove_highly_correlated_features(scaled_y, feature_names_y)
+
         self.compute_similarity()
 
         initial_PCA_components = min(self.scaled_data.shape[1], len(self.scaled_data) - 1)
         self.pca = PCA(n_components=initial_PCA_components)
+        pca_y= PCA(n_components=initial_PCA_components)
         pca_transformed = self.pca.fit_transform(self.scaled_data)
+        pca_y = pca_y.fit_transform(scaled_y)
 
         explained_variance = self.pca.explained_variance_ratio_
         cumulative_variance = np.cumsum(explained_variance)
 
-        optimal_pca_components = np.argmax(cumulative_variance > 0.75) + 1
+        optimal_pca_components = np.argmax(cumulative_variance > 0.90) + 1
         pca_transformed = pca_transformed[:, :optimal_pca_components]
         loading_scores = self.compute_loading_scores(self.pca, feature_names)
 
@@ -74,10 +77,12 @@ class DimensionalityReducer:
         self.perform_tsne(pca_transformed, labels)
         save_cluster_labels(data, pca_transformed, labels, self.result_dir)
 
+        trainer = QSARModelTrainer(self.args)
         for component in range(1,optimal_pca_components+1):
             reduced_data = pca_transformed[:, :component]
-            self.perform_regression(reduced_data, log, component)
-
+            trainer.train_and_evaluate(reduced_data, log, component)
+        trainer.select_best_model()
+        trainer.retrain_best_model(pca_transformed, log, pca_y, y_test)
 
     def save_reduced_data(self, reduced_data, data, scaler_name):
         """Save the reduced data to a CSV file."""

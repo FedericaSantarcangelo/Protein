@@ -61,14 +61,23 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     """
     Run the QSAR pilot study
     """
-    df = pd.read_csv(input_file)
-    df = process_molecules_and_calculate_descriptors(df)
-    df = prepare_data(df)
-    numerical_data = df.select_dtypes(include=[np.number])
-    numerical_data = numerical_data.drop(columns=['Standard Value', 'Log Standard Value'])
-    numerical_data = numerical_data.fillna(0)
+    df_x = pd.read_csv(input_file)
+
+    df_y = pd.read_csv("/home/federica/LAB2/chembl1865/egfr_qsar/osimertinib_test.csv")
+    df_y_f = df_y[~df_y['Molecule ChEMBL ID'].isin(df_x['Molecule ChEMBL ID'])]
+    df_y = process_molecules_and_calculate_descriptors(df_y_f)
+    df_y = prepare_data(df_y)
+    numerical_data_y = df_y.select_dtypes(include=[np.number])
+    numerical_data_y = numerical_data_y.drop(columns=['Standard Value', 'Log Standard Value'])
+    numerical_data_y = numerical_data_y.fillna(0)
+
+    df_x = process_molecules_and_calculate_descriptors(df_x)
+    df_x = prepare_data(df_x)
+    numerical_data_x = df_x.select_dtypes(include=[np.number])
+    numerical_data_x = numerical_data_x.drop(columns=['Standard Value', 'Log Standard Value'])
+    numerical_data_x = numerical_data_x.fillna(0)
     reducer = DimensionalityReducer(args)
-    reducer.fit_transform(numerical_data, df['Log Standard Value'])
+    reducer.fit_transform(numerical_data_x, df_x['Log Standard Value'], numerical_data_y, df_y['Log Standard Value'])
 
     return 1
 
