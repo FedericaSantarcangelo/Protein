@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
 import os
+from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor, GradientBoostingRegressor
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.neural_network import MLPRegressor
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
@@ -21,7 +22,7 @@ class QSARModelTrainer:
 
     def calculate_q2(self, model, X_test, y_test):
         """ Calcola il Q² sul test set senza riaddestrare il modello """
-        y_pred = model.predict(X_test)  # Usa il modello già addestrato
+        y_pred = model.predict(X_test) 
         numerator = np.sum((y_test - y_pred) ** 2)
         denominator = np.sum((y_test - np.mean(y_test)) ** 2)
         q2 = 1 - (numerator / denominator)
@@ -34,21 +35,50 @@ class QSARModelTrainer:
         """
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=self.args.seed)
         models = {
-            'PLS': (PLSRegression(), {'n_components': range(1, min(X_train.shape[1], len(X_train)) + 1)}),
-            'Random Forest': (RandomForestRegressor(random_state=self.args.seed), {'n_estimators': [100, 200], 'max_depth': [None, 10, 20]}),
-            'AdaBoost': (AdaBoostRegressor(random_state=self.args.seed), {'n_estimators': [50, 100]}),
-            'Gradient Boosting': (GradientBoostingRegressor(random_state=self.args.seed), {'n_estimators': [100, 200], 'learning_rate': [0.1, 0.01]}),
-            'MLP': (MLPRegressor(random_state=self.args.seed), {'hidden_layer_sizes': [(100,), (100, 100)], 'alpha': [0.0001, 0.001]}),
-            'SVR': (SVR(), {'C': [0.1, 1, 10], 'gamma': ['scale', 'auto']}),
-            'KNN': (KNeighborsRegressor(), {'n_neighbors': [3, 5, 7]}),
-            'XGBoost': (XGBRegressor(random_state=self.args.seed), {'n_estimators': [100, 200], 'max_depth': [3, 6, 9]})
-        }
+        'Random Forest': (RandomForestRegressor(random_state=self.args.seed),
+                          {'n_estimators': [10, 25, 50],  
+                           'max_depth': [3, 5, 7],  
+                           'min_samples_split': [2, 5],  
+                           'min_samples_leaf': [1, 2],  
+                           'max_features': ['sqrt', 'log2'],
+                           'bootstrap': [True],
+                           'criterion': ['squared_error']}),
+        'AdaBoost': (AdaBoostRegressor(random_state=self.args.seed), 
+                     {'random_state': [self.args.seed], 'n_estimators': [50, 100]}),
+        'Gradient Boosting': (GradientBoostingRegressor(random_state=self.args.seed),
+                              {'n_estimators': [10, 25, 50],  
+                               'learning_rate': [0.1, 0.05],  
+                               'max_depth': [3, 5],  
+                               'subsample': [0.8, 1.0]}),
+        'MLP': (MLPRegressor(random_state=self.args.seed), 
+                {'random_state': [self.args.seed],
+                 'hidden_layer_sizes': [(100,), (100, 100)],
+                 'alpha': [0.0001, 0.001]}),
+        'SVR': (SVR(),
+                {'C': [0.1, 1, 10],  
+                 'gamma': ['scale', 0.1], 
+                 'kernel': ['rbf']}), 
+        'KNN': (KNeighborsRegressor(),
+                {'n_neighbors': [3, 5, 7],
+                 'weights': ['uniform', 'distance'],  
+                 'metric': ['euclidean', 'manhattan']}),
+        'XGBoost': (XGBRegressor(random_state=self.args.seed),
+                    {'n_estimators': [10, 25, 50],  
+                     'max_depth': [3, 5],  
+                     'learning_rate': [0.1, 0.05],  
+                     'subsample': [0.8, 1.0],  
+                     'colsample_bytree': [0.8, 1.0]})
+    }
 
         for model_name, (model, param_grid) in models.items():
-            grid_search = GridSearchCV(model, param_grid, cv=5, scoring='r2', n_jobs=-1)
-            grid_search.fit(X_train, y_train)
-            best_model = grid_search.best_estimator_
-            best_params = grid_search.best_params_
+            if len(param_grid) > 10:
+                search = RandomizedSearchCV(model, param_distributions=param_grid, n_iter=50, cv=5, scoring='r2', n_jobs=-1)
+            else:
+                search = GridSearchCV(model, param_grid, cv=5, scoring='r2', n_jobs=-1)
+        
+            search.fit(X_train, y_train)
+            best_model = search.best_estimator_
+            best_params = search.best_params_
 
             y_train_pred = best_model.predict(X_train)
             r2_train = r2_score(y_train, y_train_pred)
@@ -92,24 +122,43 @@ class QSARModelTrainer:
         for file in os.listdir(self.result_dir):
             if file.endswith('_results.csv'):
                 results_df = pd.read_csv(os.path.join(self.result_dir, file))
-            
-            # Filter results where R2 > Q2
+
                 filtered_results_df = results_df[results_df['R2'] > results_df['Q2']]
+                filtered_results_df = filtered_results_df[filtered_results_df['R2'] < 1]
                 if not filtered_results_df.empty:
-                # Select the best result based on the highest Q2 score
-                    best_result = filtered_results_df.loc[filtered_results_df['Q2'].idxmax()]
-                    best_results.append(best_result)
+                    
+                    filtered_results_df['R2+Q2'] = filtered_results_df['R2'] + filtered_results_df['Q2']
+                    filtered_results_df = filtered_results_df.sort_values('R2+Q2', ascending=False)
+                    filtered_results_df['Vote sum'] = range(1, len(filtered_results_df) + 1)
+
+                    filtered_results_df['R2-Q2'] = filtered_results_df['R2']-filtered_results_df['Q2']
+                    filtered_results_df = filtered_results_df.sort_values('R2-Q2', ascending=True)
+                    filtered_results_df['Vote diff'] = range(1, len(filtered_results_df) + 1)
+
+                    filtered_results_df['Vote'] = filtered_results_df['Vote sum'] + filtered_results_df['Vote diff']
+                    filtered_results_df = filtered_results_df.sort_values('Vote', ascending=True)
+
+                    filtered_results_df['(R2+Q2)-(R2-Q2)'] = filtered_results_df['R2+Q2']-filtered_results_df['R2-Q2']
+                    filtered_results_df = filtered_results_df.sort_values('(R2+Q2)-(R2-Q2)', ascending=False)
+                    index = filtered_results_df.index[0]
+
+                    filtered_results_df.to_csv(os.path.join(self.result_dir, file), index=False)
+
+                    best_results.append(filtered_results_df.loc[index].to_dict())
 
         best_results_df = pd.DataFrame(best_results)
         best_results_df.to_csv(os.path.join(self.result_dir, 'best_model.csv'), index=False)
         return best_results_df
 
-    def retrain_best_model(self, X_train, y_train, X_test, y_test):
+    def retrain_best_model(self, pca, X_train, y_train, X_test, y_test, seed = 42):
         """
-        Retrain the best models with the best parameters on the input data and test on other data
+        Retrain the best models with the best parameters on the input data and test on other data,
+        applying PCA transformation within this function.
         """
         best_model_info_df = pd.read_csv(os.path.join(self.result_dir, 'best_model.csv'))
         retrain_results = []
+
+        X_test_pca = pca.transform(X_test)
 
         for _, best_model_info in best_model_info_df.iterrows():
             model_name = best_model_info['Model']
@@ -120,16 +169,19 @@ class QSARModelTrainer:
                 num_components = X_train.shape[1]
         
             X_train_subset = X_train[:, :num_components]
-            X_test_subset = X_test[:, :num_components]
+            X_test_subset = X_test_pca[:, :num_components]
         
             model = self._get_model_by_name(model_name, best_params)
-            model.fit(X_train_subset, y_train)
-            y_pred = model.predict(X_test_subset)
+            model.fit( X_train_subset, y_train)
+            y_train_pred = model.predict(X_train_subset)
+            y_test_pred = model.predict(X_test_subset)
+
         
-            r2 = r2_score(y_test, y_pred)
+            r2 = r2_score(y_train, y_train_pred)
             q2 = self.calculate_q2(model, X_test_subset, y_test)
-            mse = mean_squared_error(y_test, y_pred)
-            mae = mean_absolute_error(y_test, y_pred)
+            mse = mean_squared_error(y_test, y_test_pred)
+            mae = mean_absolute_error(y_test, y_test_pred)
+
         
             retrain_results.append({
                 'Model': model_name,
@@ -141,7 +193,7 @@ class QSARModelTrainer:
     
         retrain_results_df = pd.DataFrame(retrain_results)
         retrain_results_df.to_csv(os.path.join(self.result_dir, 'best_retrain.csv'), index=False)
-        
+
     def _get_model_by_name(self, model_name, params):
         """
         Get the model instance by name and set the parameters
