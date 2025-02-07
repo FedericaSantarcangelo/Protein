@@ -10,7 +10,6 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
 from sklearn.metrics import r2_score
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 class QSARModelTrainer:
@@ -29,11 +28,11 @@ class QSARModelTrainer:
     
         return q2
 
-    def train_and_evaluate(self, X, y, component):
+    def train_and_evaluate(self, X_train, y_train, X_test, y_test, component):
         """
         Train and evaluate multiple regression models
         """
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=self.args.seed)
+
         models = {
         'Random Forest': (RandomForestRegressor(random_state=self.args.seed),
                           {'n_estimators': [10, 25, 50],  
@@ -71,11 +70,7 @@ class QSARModelTrainer:
     }
 
         for model_name, (model, param_grid) in models.items():
-            if len(param_grid) > 10:
-                search = RandomizedSearchCV(model, param_distributions=param_grid, n_iter=50, cv=5, scoring='r2', n_jobs=-1)
-            else:
-                search = GridSearchCV(model, param_grid, cv=5, scoring='r2', n_jobs=-1)
-        
+            search = GridSearchCV(model, param_grid, n_jobs=-1, cv=5, scoring='r2')
             search.fit(X_train, y_train)
             best_model = search.best_estimator_
             best_params = search.best_params_

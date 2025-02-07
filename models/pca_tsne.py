@@ -8,6 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from utils.data_handling import select_optimal_clusters
 from dataset.processing import remove_highly_correlated_features, remove_zero_variance_features
 from models.qsar_models import QSARModelTrainer 
+from sklearn.model_selection import train_test_split
 from models.plot import plot_similarity_matrix, save_loading_scores, create_cumulative_variance_plot, create_individual_variance_plot
 from models.plot import elbow, silhouette, plot_kmeans_clusters, plot_tsne, save_cluster_labels, find_intersection
 from sklearn.decomposition import PCA
@@ -20,12 +21,11 @@ class DimensionalityReducer:
         self.result_dir = self.args.path_pca_tsne
         os.makedirs(self.result_dir, exist_ok=True)
         self.scaler = StandardScaler()
-        self.scaled_data = None
         self.similarity_matrix = None
 
-    def compute_similarity(self):
+    def compute_similarity(self, scaled_data):
         """Compute and plot the similarity matrix."""
-        self.similarity_matrix = self.similarity(self.scaled_data)
+        self.similarity_matrix = self.similarity(scaled_data)
         plot_similarity_matrix(self.similarity_matrix, self.args.similarities + '_matrix.png', self.result_dir)
         similarity_df = pd.DataFrame(self.similarity_matrix)
         similarity_path = os.path.join(self.result_dir, self.args.similarities + '_matrix.csv')
@@ -37,66 +37,72 @@ class DimensionalityReducer:
         loadings = pca.components_.T
         return pd.DataFrame(loadings, index=feature_names, columns=[f"PC{i+1}" for i in range(loadings.shape[1])])
 
-    def fit_transform(self, data, log, X_test, y_test):
+    def fit_transform(self, X_train, y_train, X_test, y_test):
         """Fit and transform the data using PCA, regression, clustering, and t-SNE."""
-        data['ID'] = np.arange(len(data))
-        X_test['ID'] = np.arange(len(X_test))
+        
+        X_train_f, Y_train_f, X_test_f, Y_test_f = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+        
+        X_train_f['ID'] = np.arange(len(X_train_f))
+        Y_train_f['ID'] = np.arange(len(Y_train_f))
 
-        self.scaled_data = self.scaler.fit_transform(data)
-        scaled_y = self.scaler.transform(X_test)
-        feature_names = data.columns[:-1]
-        feature_names_y = X_test.columns[:-1]
+        scaled_X_train_f = self.scaler.fit_transform(X_train_f)
+        scaled_Y_train_f = self.scaler.transform(Y_train_f)
+        feature_X_train_f = X_train_f.columns[:-1]
+        feature_Y_train_f = Y_train_f.columns[:-1]
 
-        self.scaled_data, feature_names = remove_zero_variance_features(self.scaled_data, feature_names)
-        scaled_y, feature_names_y = remove_zero_variance_features(scaled_y, feature_names_y)
-        common_features = np.intersect1d(feature_names, feature_names_y)
-        feature_mask_data = np.isin(feature_names, common_features)
-        feature_mask_y = np.isin(feature_names_y, common_features)
-        self.scaled_data = self.scaled_data[:, feature_mask_data]
-        scaled_y = scaled_y[:, feature_mask_y]
-        feature_names = feature_names[feature_mask_data]
-        feature_names_y = feature_names_y[feature_mask_y]
-        self.scaled_data, feature_names = remove_highly_correlated_features(self.scaled_data, feature_names)
-        scaled_y, feature_names_y = remove_highly_correlated_features(scaled_y, feature_names_y)
-        common_features = np.intersect1d(feature_names, feature_names_y)
-        feature_mask_data = np.isin(feature_names, common_features)
-        feature_mask_y = np.isin(feature_names_y, common_features)
-        self.scaled_data = self.scaled_data[:, feature_mask_data]
-        scaled_y = scaled_y[:, feature_mask_y]
-        feature_names = np.array(feature_names)[feature_mask_data]
-        feature_names_y = np.array(feature_names_y)[feature_mask_y]
+        scaled_X_train_f, feature_X_train_f = remove_zero_variance_features(scaled_X_train_f, feature_X_train_f)
+        scaled_Y_train_f, feature_Y_train_f = remove_zero_variance_features(scaled_Y_train_f, feature_Y_train_f)
+        common_features = np.intersect1d(feature_X_train_f, feature_Y_train_f)
+        feature_mask_X_train_f = np.isin(feature_X_train_f, common_features)
+        feature_mask_Y_train_f = np.isin(feature_Y_train_f, common_features)
+        scaled_X_train_f = scaled_X_train_f[:, feature_mask_X_train_f]
+        scaled_Y_train_f = scaled_Y_train_f[:, feature_mask_Y_train_f]
+        feature_X_train_f = feature_X_train_f[feature_mask_X_train_f]
+        feature_Y_train_f = feature_Y_train_f[feature_mask_Y_train_f]
 
-        self.compute_similarity()
+        scaled_X_train_f, feature_X_train_f = remove_highly_correlated_features(scaled_X_train_f, feature_X_train_f)
+        scaled_Y_train_f, feature_Y_train_f = remove_highly_correlated_features(scaled_Y_train_f, feature_Y_train_f)
+        common_features = np.intersect1d(feature_X_train_f, feature_Y_train_f)
+        feature_mask_X_train_f = np.isin(feature_X_train_f, common_features)
+        feature_mask_Y_train_f = np.isin(feature_Y_train_f, common_features)
+        scaled_X_train_f = scaled_X_train_f[:, feature_mask_X_train_f]
+        scaled_Y_train_f = scaled_Y_train_f[:, feature_mask_Y_train_f]
+        feature_X_train_f = np.array(feature_X_train_f)[feature_mask_X_train_f]
+        feature_Y_train_f = np.array(feature_Y_train_f)[feature_mask_Y_train_f]
 
-        initial_PCA_components = min(self.scaled_data.shape[1], len(self.scaled_data) - 1)
+        
+        self.compute_similarity(scaled_X_train_f)
+
+        initial_PCA_components = min(scaled_X_train_f.shape[1], len(scaled_X_train_f) - 1)
         self.pca = PCA(n_components=initial_PCA_components)
-        pca_transformed = self.pca.fit_transform(self.scaled_data)
-        #pca_transformed_y = self.pca.transform(scaled_y)
-
-        explained_variance = self.pca.explained_variance_ratio_
-        cumulative_variance = np.cumsum(explained_variance)
-
+        
+        pca_scaled_X_train_f = self.pca.fit_transform(scaled_X_train_f)
+        pca_scaled_Y_train_f = self.pca.transform(scaled_Y_train_f)
+        
+        explained_variance_ratio = self.pca.explained_variance_ratio_
+        cumulative_variance = np.cumsum(explained_variance_ratio)
         optimal_pca_components = np.argmax(cumulative_variance > 0.99) + 1
-        pca_transformed = pca_transformed[:, :optimal_pca_components]
-        loading_scores = self.compute_loading_scores(self.pca, feature_names)
 
-        save_loading_scores(loading_scores, 'standard_scaler_loading_scores.csv', self.result_dir)
-        create_cumulative_variance_plot(cumulative_variance, self.result_dir, 'standard_scaler')
-        create_individual_variance_plot(explained_variance, self.result_dir, 'standard_scaler')
+        pca_scaled_X_train_f = pca_scaled_X_train_f[:, :optimal_pca_components]
+        pca_scaled_Y_train_f = pca_scaled_Y_train_f[:, :optimal_pca_components]
 
-        inertia = elbow(pca_transformed, optimal_pca_components, self.result_dir, self.args.seed)
-        silhouette_scores = silhouette(pca_transformed, optimal_pca_components, self.result_dir, self.args.seed)
-        optimal_clusters = select_optimal_clusters(inertia, silhouette_scores)
-        labels = self.perform_kmeans(pca_transformed, optimal_clusters)
-        self.perform_tsne(pca_transformed, labels)
-        save_cluster_labels(data, pca_transformed, labels, self.result_dir)
+        loading_score = self.compute_loading_scores(self.pca, feature_X_train_f)
+        save_loading_scores(loading_score, 'pca_scaled_X_train_f_loading_score.csv' ,self.result_dir)
+        create_cumulative_variance_plot(cumulative_variance, 'cumulative_variance.png', self.result_dir)
+        create_individual_variance_plot(explained_variance_ratio, 'individual_variance.png', self.result_dir)
+        inertia = elbow(pca_scaled_X_train_f, optimal_pca_components ,self.result_dir, self.args.seed)
+        silhouette_score = silhouette(pca_scaled_X_train_f, optimal_pca_components, self.result_dir, self.args.seed)
+        optimal_cluster = select_optimal_clusters(inertia, silhouette_score)
+        labels = self.perform_kmeans(pca_scaled_X_train_f, optimal_cluster)
+        self.perform_tsne(pca_scaled_X_train_f, labels)
+        save_cluster_labels(X_train_f, pca_scaled_X_train_f, labels, self.result_dir)
 
         trainer = QSARModelTrainer(self.args)
         for component in range(1, optimal_pca_components + 1):
-            reduced_data = pca_transformed[:, :component]
-            trainer.train_and_evaluate(reduced_data, log, component)
+            reduced_data_X_train_f = pca_scaled_X_train_f[:, :component]
+            reduced_data_Y_train_f = pca_scaled_Y_train_f[:, :component]
+            trainer.train_and_evaluate(reduced_data_X_train_f, X_test_f, reduced_data_Y_train_f, Y_test_f, component)
         trainer.select_best_model()
-        trainer.retrain_best_model(self.pca, self.scaled_data, log, scaled_y, y_test)
 
     def save_reduced_data(self, reduced_data, data, scaler_name):
         """Save the reduced data to a CSV file."""
