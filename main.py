@@ -77,7 +77,6 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     numerical_data_x = numerical_data_x.drop(columns=['Standard Value', 'Log Standard Value'])
     numerical_data_x = numerical_data_x.fillna(0)
 
-    #numerical_data_x.to_csv('/home/federica/LAB2/chembl1865/egfr_qsar/numerical_data_x.csv', index=False)
     reducer = DimensionalityReducer(args)
     reducer.fit_transform(numerical_data_x, df_x['Log Standard Value'], numerical_data_y, df_y['Log Standard Value'])
 

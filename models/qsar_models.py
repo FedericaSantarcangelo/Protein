@@ -34,40 +34,48 @@ class QSARModelTrainer:
         """
 
         models = {
-        'Random Forest': (RandomForestRegressor(random_state=self.args.seed),
-                          {'n_estimators': [10, 25, 50],  
-                           'max_depth': [3, 5, 7],  
-                           'min_samples_split': [2, 5],  
-                           'min_samples_leaf': [1, 2],  
-                           'max_features': ['sqrt', 'log2'],
-                           'bootstrap': [True],
-                           'criterion': ['squared_error']}),
-        'AdaBoost': (AdaBoostRegressor(random_state=self.args.seed), 
-                     {'random_state': [self.args.seed], 'n_estimators': [50, 100]}),
-        'Gradient Boosting': (GradientBoostingRegressor(random_state=self.args.seed),
+    'Random Forest': (RandomForestRegressor(random_state=self.args.seed),
+                      {'n_estimators': [10, 25, 50],  
+                       'max_depth': [3, 5, 7],  
+                       'min_samples_split': [2, 5],
+                       'min_samples_leaf': [1, 2], 
+                       'max_features': ['sqrt', 'log2'], 
+                       'bootstrap': [True],  
+                       'criterion': ['squared_error']}), 
+    
+    'AdaBoost': (AdaBoostRegressor(random_state=self.args.seed), 
+                 {'n_estimators': [50, 100, 200, 500],
+                  'learning_rate': [0.01, 0.1, 0.5, 1.0]}),
+
+     'Gradient Boosting': (GradientBoostingRegressor(random_state=self.args.seed),
                               {'n_estimators': [10, 25, 50],  
                                'learning_rate': [0.1, 0.05],  
                                'max_depth': [3, 5],  
-                               'subsample': [0.8, 1.0]}),
-        'MLP': (MLPRegressor(random_state=self.args.seed), 
-                {'random_state': [self.args.seed],
-                 'hidden_layer_sizes': [(100,), (100, 100)],
-                 'alpha': [0.0001, 0.001]}),
-        'SVR': (SVR(),
-                {'C': [0.1, 1, 10],  
-                 'gamma': ['scale', 0.1], 
-                 'kernel': ['rbf']}), 
-        'KNN': (KNeighborsRegressor(),
-                {'n_neighbors': [3, 5, 7],
-                 'weights': ['uniform', 'distance'],  
-                 'metric': ['euclidean', 'manhattan']}),
-        'XGBoost': (XGBRegressor(random_state=self.args.seed),
+                               'subsample': [0.8, 1.0]}),  
+    
+    'MLP': (MLPRegressor(random_state=self.args.seed), 
+            {'hidden_layer_sizes': [(50,), (100,), (100, 100), (200, 100)], 
+             'alpha': [0.0001, 0.001, 0.01],  
+             'learning_rate_init': [0.001, 0.01]}), 
+    
+    'SVR': (SVR(),
+            {'C': [0.1, 1, 10, 100],  
+             'gamma': ['scale', 'auto', 0.1, 1], 
+             'kernel': ['rbf', 'linear']}), 
+    
+    'KNN': (KNeighborsRegressor(),
+            {'n_neighbors': [3, 5, 7, 10, 15],
+             'weights': ['uniform'], 
+             'metric': ['euclidean', 'manhattan', 'chebyshev']}),
+
+     'XGBoost': (XGBRegressor(random_state=self.args.seed),
                     {'n_estimators': [10, 25, 50],  
                      'max_depth': [3, 5],  
                      'learning_rate': [0.1, 0.05],  
                      'subsample': [0.8, 1.0],  
-                     'colsample_bytree': [0.8, 1.0]})
-    }
+                     'colsample_bytree': [0.8, 1.0]}) 
+}
+
 
         for model_name, (model, param_grid) in models.items():
             search = GridSearchCV(model, param_grid, n_jobs=-1, cv=5, scoring='r2')
@@ -145,15 +153,13 @@ class QSARModelTrainer:
         best_results_df.to_csv(os.path.join(self.result_dir, 'best_model.csv'), index=False)
         return best_results_df
 
-    def retrain_best_model(self, pca, X_train, y_train, X_test, y_test, seed = 42):
+    def retrain_best_model(self, X_train, y_train, X_test, y_test, seed = 42):
         """
         Retrain the best models with the best parameters on the input data and test on other data,
         applying PCA transformation within this function.
         """
         best_model_info_df = pd.read_csv(os.path.join(self.result_dir, 'best_model.csv'))
         retrain_results = []
-
-        X_test_pca = pca.transform(X_test)
 
         for _, best_model_info in best_model_info_df.iterrows():
             model_name = best_model_info['Model']
@@ -164,7 +170,7 @@ class QSARModelTrainer:
                 num_components = X_train.shape[1]
         
             X_train_subset = X_train[:, :num_components]
-            X_test_subset = X_test_pca[:, :num_components]
+            X_test_subset = X_test[:, :num_components]
         
             model = self._get_model_by_name(model_name, best_params)
             model.fit( X_train_subset, y_train)
