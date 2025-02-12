@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 from argparse import Namespace
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from utils.data_handling import select_optimal_clusters
@@ -69,6 +69,7 @@ class DimensionalityReducer:
         scaled_Y_train_f = scaled_Y_train_f[:, feature_mask_Y_train_f]
         feature_X_train_f = np.array(feature_X_train_f)[feature_mask_X_train_f]
         feature_Y_train_f = np.array(feature_Y_train_f)[feature_mask_Y_train_f]
+        np.save("/home/federica/LAB2/chembl1865/egfr_qsar/qsar_results/selected_features.npy", feature_X_train_f)
 
         self.compute_similarity(scaled_X_train_f)
 
@@ -103,44 +104,28 @@ class DimensionalityReducer:
             trainer.train_and_evaluate(reduced_data_X_train_f, X_test_f, reduced_data_Y_train_f, Y_test_f, component)
         trainer.select_best_model()
         pca_scaled_X, pca_scaled_y = self.allign(X_train, X_test)
-        trainer.retrain_best_model(pca_scaled_X, y_train, pca_scaled_y, y_test)
+        #trainer.retrain_best_model(pca_scaled_X, y_train, pca_scaled_y, y_test)
+        trainer.test_model(pca_scaled_y, y_test)
 
     def allign(self,X_train, X_test):
         """ Allign train and test set for retrain models"""
         
+        selected_features = np.load("/home/federica/LAB2/chembl1865/egfr_qsar/qsar_results/selected_features.npy")
+
         X_train_s = X_train.copy()
         X_test_s = X_test.copy()
-
         X_train_s['ID'] = np.arange(len(X_train_s))
         X_test_s['ID'] = np.arange(len(X_test_s))
 
         scaled_X_train = self.scaler.transform(X_train_s)
         scaled_X_test = self.scaler.transform(X_test_s)
+        feature_names = np.array(X_train_s.columns)
+        feature_mask = np.isin(feature_names, selected_features) 
 
-        feature_X_train = X_train_s.columns[:-1]
-        feature_X_test = X_test_s.columns[:-1]
+        scaled_X_train = scaled_X_train[:, feature_mask]
+        scaled_X_test = scaled_X_test[:, feature_mask]
 
-        scaled_X_train, feature_X_train = remove_zero_variance_features(scaled_X_train, feature_X_train)
-        scaled_X_test, feature_X_test = remove_zero_variance_features(scaled_X_test, feature_X_test)
-        common_features = np.intersect1d(feature_X_train, feature_X_test)
-        feature_mask_X_train = np.isin(feature_X_train, common_features)
-        feature_mask_X_test = np.isin(feature_X_test, common_features)
-        scaled_X_train = scaled_X_train[:, feature_mask_X_train]
-        scaled_X_test = scaled_X_test[:, feature_mask_X_test]
-        feature_X_train = feature_X_train[feature_mask_X_train]
-        feature_X_test = feature_X_test[feature_mask_X_test]
-
-        scaled_X_train, feature_X_train = remove_highly_correlated_features(scaled_X_train, feature_X_train)
-        scaled_X_test, feature_X_test = remove_highly_correlated_features(scaled_X_test, feature_X_test)
-        common_features = np.intersect1d(feature_X_train, feature_X_test)
-        feature_mask_X_train = np.isin(feature_X_train, common_features)
-        feature_mask_X_test = np.isin(feature_X_test, common_features)
-        scaled_X_train = scaled_X_train[:, feature_mask_X_train]
-        scaled_X_test = scaled_X_test[:, feature_mask_X_test]
-        feature_X_train = np.array(feature_X_train)[feature_mask_X_train]
-        feature_X_test = np.array(feature_X_test)[feature_mask_X_test]
-
-        pca_scaled_X_train = self.pca.fit_transform(scaled_X_train)
+        pca_scaled_X_train = self.pca.transform(scaled_X_train)
         pca_scaled_X_test = self.pca.transform(scaled_X_test)
         
         return pca_scaled_X_train, pca_scaled_X_test

@@ -27,7 +27,7 @@
             "console": "integratedTerminal",
             "args": [
                 "--qsar_pilot",
-                "--input_file", "/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/osimertinib_main_smiles.csv",
+                "--input_file","/home/federica/LAB2/chembl1865/egfr_qsar/osimertinib_main_smiles.csv",
                 "--seed", "42",
                 "--model", "all",
                 "--n_clusters", "3"
