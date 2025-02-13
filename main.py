@@ -63,7 +63,7 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     """
     df_x = pd.read_csv(input_file)
 
-    df_y = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/selected_training.csv")
+    df_y = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/164molecule.csv")
     df_y_f = df_y[~df_y['Molecule ChEMBL ID'].isin(df_x['Molecule ChEMBL ID'])]
     #df_x_f = df_x[~df_x['Molecule ChEMBL ID'].isin(df_y['Molecule ChEMBL ID'])]
     df_y = process_molecules_and_calculate_descriptors(df_y_f)

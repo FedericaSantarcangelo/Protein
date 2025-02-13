@@ -153,8 +153,9 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     Prepare the data by dropping unnecessary columns and computing log and root squared values
     :return: the prepared data
     """
-    df_prepared = df.drop(columns=['Smiles (RDKit Mol)', 'Document ChEMBL ID'])
-
+    columns_to_drop = ['Smiles (RDKit Mol)', 'Document ChEMBL ID', 'MACCS_sim_score', 'MCSS_rdkit_sim_score', 'ECFP4_sim_score']
+    df_prepared = df.drop(columns=[col for col in columns_to_drop if col in df.columns])
+    
     if (df_prepared['Standard Value'] <= 0).any():
         raise ValueError("Standard Value with negative value. Cannot compute log.")
     IQR = df_prepared['Standard Value'].quantile(0.75) - df_prepared['Standard Value'].quantile(0.25)
@@ -165,7 +166,6 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     data_no_outliers = data_no_outliers.copy()
     data_no_outliers.loc[:, 'Log Standard Value'] = -np.log(data_no_outliers['Standard Value'])
     return data_no_outliers
-
 def select_optimal_clusters(inertia_scores, silhouette_scores):
     """
     Select the optimal number of clusters
