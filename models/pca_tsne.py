@@ -105,7 +105,7 @@ class DimensionalityReducer:
         trainer.select_best_model()
         pca_scaled_X, pca_scaled_y = self.allign(X_train, X_test)
         #trainer.retrain_best_model(pca_scaled_X, y_train, pca_scaled_y, y_test)
-        trainer.test_model(pca_scaled_y, y_test)
+        trainer.test_model(reduced_data_Y_train_f, Y_test_f)
 
     def allign(self,X_train, X_test):
         """ Allign train and test set for retrain models"""

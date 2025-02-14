@@ -164,7 +164,7 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     data_no_outliers = df_prepared[df_prepared['Standard Value'] <= upper_bound]
     
     data_no_outliers = data_no_outliers.copy()
-    data_no_outliers.loc[:, 'Log Standard Value'] = -np.log(data_no_outliers['Standard Value'])
+    data_no_outliers.loc[:, 'Log Standard Value'] = -np.log10((data_no_outliers['Standard Value']/1e9))
     return data_no_outliers
 def select_optimal_clusters(inertia_scores, silhouette_scores):
     """

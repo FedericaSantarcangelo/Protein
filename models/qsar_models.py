@@ -48,12 +48,12 @@ class QSARModelTrainer:
             y_train_pred = best_model.predict(X_train)
             r2_train = r2_score(y_train, y_train_pred)
             q2 = self.calculate_q2(best_model, X_test, y_test)
-            self._save_results(best_model, X_test, y_test, model_name, component, best_params, r2_train, q2)
+            self._save_results(best_model, X_test, y_test, model_name, component, best_params, r2_train, q2, y_train, y_train_pred)
             model_path = os.path.join(self.result_dir, f'file_pkl/{model_name}_best_model_{component}.pkl')
             with open(model_path, 'wb') as f:
                 pickle.dump(best_model, f)
 
-    def _save_results(self, model, X_test, y_test, model_name, component, params, r2, q2):
+    def _save_results(self, model, X_test, y_test, model_name, component, params, r2, q2,y_train, y_train_pred):
         """
         Save the evaluation metrics and best parameters to a CSV file
         """
@@ -67,7 +67,11 @@ class QSARModelTrainer:
             'R2': r2,
             'Q2': q2,
             'MAE': mae,
-            'Best Params': params
+            'Best Params': params,
+            'y_train': y_train,
+            'y_train_pred': y_train_pred,
+            'y_test': y_test,
+            'y_pred': y_pred
         }
         results_path = os.path.join(self.result_dir, f'{model_name.lower().replace(" ", "_")}_results.csv')
         if os.path.exists(results_path):
@@ -134,7 +138,11 @@ class QSARModelTrainer:
                 'R2': r2,
                 'Q2': q2,
                 'MSE': mse,
-                'MAE': mae
+                'MAE': mae,
+                'y_train': y_train,
+                'y_train_pred': y_train_pred,
+                'y_test': y_test,
+                'y_test_pred': y_test_pred
             })
         retrain_results_df = pd.DataFrame(retrain_results)
         retrain_results_df.to_csv(os.path.join(self.result_dir, 'best_retrain.csv'), index=False)
@@ -183,7 +191,9 @@ class QSARModelTrainer:
                 'Model': model_name,
                 'Q2': q2,
                 'MSE': mse,
-                'MAE': mae
+                'MAE': mae,
+                'y_test': y_test,
+                'y_pred': y_pred
             }
             test_results.append(results)
 
