@@ -67,11 +67,7 @@ class QSARModelTrainer:
             'R2': r2,
             'Q2': q2,
             'MAE': mae,
-            'Best Params': params,
-            'y_train': y_train,
-            'y_train_pred': y_train_pred,
-            'y_test': y_test,
-            'y_pred': y_pred
+            'Best Params': params
         }
         results_path = os.path.join(self.result_dir, f'{model_name.lower().replace(" ", "_")}_results.csv')
         if os.path.exists(results_path):
@@ -138,11 +134,7 @@ class QSARModelTrainer:
                 'R2': r2,
                 'Q2': q2,
                 'MSE': mse,
-                'MAE': mae,
-                'y_train': y_train,
-                'y_train_pred': y_train_pred,
-                'y_test': y_test,
-                'y_test_pred': y_test_pred
+                'MAE': mae
             })
         retrain_results_df = pd.DataFrame(retrain_results)
         retrain_results_df.to_csv(os.path.join(self.result_dir, 'best_retrain.csv'), index=False)
@@ -191,9 +183,7 @@ class QSARModelTrainer:
                 'Model': model_name,
                 'Q2': q2,
                 'MSE': mse,
-                'MAE': mae,
-                'y_test': y_test,
-                'y_pred': y_pred
+                'MAE': mae
             }
             test_results.append(results)
 
