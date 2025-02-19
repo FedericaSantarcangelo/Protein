@@ -60,6 +60,15 @@ class QSARModelTrainer:
         y_pred = model.predict(X_test).ravel()
         mse = mean_squared_error(y_test, y_pred)
         mae = mean_absolute_error(y_test, y_pred)
+
+        pred_results = pd.DataFrame({
+        'y_test': y_test,
+        'y_pred': y_pred
+        })
+
+        pred_path = os.path.join(self.result_dir, f'predictions/{model_name}_{component}_predictions_train.csv')
+        os.makedirs(os.path.dirname(pred_path), exist_ok=True) 
+        pred_results.to_csv(pred_path, index=False)
         results = {
             'Model': model_name,
             'PC': component,
@@ -136,6 +145,14 @@ class QSARModelTrainer:
                 'MSE': mse,
                 'MAE': mae
             })
+            pred_results = pd.DataFrame({
+            'y_test': y_test,
+            'y_pred': y_test_pred
+            })
+            pred_path = os.path.join(self.result_dir, f'predictions/{model_name}_predictions_retrain.csv')
+            os.makedirs(os.path.dirname(pred_path), exist_ok=True) 
+            pred_results.to_csv(pred_path, index=False)
+
         retrain_results_df = pd.DataFrame(retrain_results)
         retrain_results_df.to_csv(os.path.join(self.result_dir, 'best_retrain.csv'), index=False)
 
@@ -186,6 +203,14 @@ class QSARModelTrainer:
                 'MAE': mae
             }
             test_results.append(results)
+            pred_results = pd.DataFrame({
+            'y_test': y_test,
+            'y_pred': y_pred
+            })
+            pred_path = os.path.join(self.result_dir, f'predictions/{model_name}_predictions_test.csv')
+            os.makedirs(os.path.dirname(pred_path), exist_ok=True) 
+            pred_results.to_csv(pred_path, index=False)
+
 
         results_df = pd.DataFrame(test_results)
         results_df.to_csv(os.path.join(self.result_dir, 'test_results.csv'), index=False)
