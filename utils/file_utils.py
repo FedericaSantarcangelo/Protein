@@ -3,7 +3,8 @@ import os
 import glob
 import pandas as pd
 import sys
-
+from rdkit import Chem
+from rdkit.Chem import MACCSkeys, AllChem, DataStructs, rdFMCS
 
 def detect_delimiter(path: str, num_lines = 5) -> str:
     """
@@ -166,3 +167,23 @@ def save_data_report(base_path: str, label ,data_dict: dict):
             df.to_csv(full_path, index=False, encoding='utf-8')
         except Exception as e:
             print(f"Errore durante il salvataggio del file {full_path}: {e}")
+
+def calculate_similarity_scores(df):
+    smiles_list = df['Smiles'].tolist()
+    mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list]
+    maccs_keys = [MACCSkeys.GenMACCSKeys(mol) for mol in mols]
+    ecfp4_fps = [AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048) for mol in mols]
+    maccs_sim_scores = [DataStructs.FingerprintSimilarity(maccs_keys[0], key) for key in maccs_keys]
+    ecfp4_sim_scores = [DataStructs.FingerprintSimilarity(ecfp4_fps[0], fp) for fp in ecfp4_fps]
+    mcss_sim_scores = []
+    for mol in mols:
+        mcs = rdFMCS.FindMCS([mols[0], mol])
+        mcs_mol = Chem.MolFromSmarts(mcs.smartsString)
+        if mcs_mol is not None:
+            mcss_sim_scores.append(mcs.numAtoms / float(mols[0].GetNumAtoms()))
+        else:
+            mcss_sim_scores.append(0)
+    df['MACCS_sim_score'] = maccs_sim_scores
+    df['ECFP4_sim_score'] = ecfp4_sim_scores
+    df['MCSS_rdkit_sim_score'] = mcss_sim_scores
+    return df

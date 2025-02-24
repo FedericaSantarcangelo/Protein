@@ -29,7 +29,6 @@
                 "--qsar_pilot",
                 "--input_file","/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/62molecule.csv",
                 "--seed", "42",
-                "--model", "all",
                 "--n_clusters", "3"
             ]
         },

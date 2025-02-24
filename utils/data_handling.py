@@ -7,7 +7,6 @@ from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from utils.file_utils import competence
 
-# Patterns for finding mutations in the assay description field
 aminoacids = {
     'Ala': 'A', 'Arg': 'R', 'Asn': 'N', 'Asp': 'D', 'Cys': 'C', 'Gln': 'Q', 'Glu': 'E',
     'Gly': 'G', 'His': 'H', 'Ile': 'I', 'Leu': 'L', 'Lys': 'K', 'Met': 'M', 'Phe': 'F',
@@ -162,10 +161,11 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     lower_bound = df_prepared['Standard Value'].quantile(0.25) - 1.5 * IQR
     upper_bound = df_prepared['Standard Value'].quantile(0.75) + 1.5 * IQR
     data_no_outliers = df_prepared[df_prepared['Standard Value'] <= upper_bound]
-    
+
     data_no_outliers = data_no_outliers.copy()
     data_no_outliers.loc[:, 'Log Standard Value'] = -np.log10((data_no_outliers['Standard Value']/1e9))
     return data_no_outliers
+    
 def select_optimal_clusters(inertia_scores, silhouette_scores):
     """
     Select the optimal number of clusters

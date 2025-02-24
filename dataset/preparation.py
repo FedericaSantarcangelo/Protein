@@ -16,7 +16,6 @@ class Cleaner():
     def __init__(self,args: Namespace):
         self.args = args
         self.assay = load_file(self.args.path_assay)
-
     def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Main function to clean the data
@@ -56,7 +55,6 @@ class Cleaner():
                 return pd.concat(all_mixed)
         act = process_df(df_act, 'act')
         perc = process_df(df_perc, 'perc')
-
         return pd.concat([act, perc])
 
     def remove_row(self,data: pd.DataFrame):
@@ -69,7 +67,7 @@ class Cleaner():
                             'Standard Relation',
                             'Standard Value',
                             'Standard Units'])
-        data = data.loc[data['Standard Value'] > 0] # Remove the rows with negative values
+        data = data.loc[data['Standard Value'] > 0] 
         return data
 
     def filter_data(self, data: pd.DataFrame):
@@ -81,12 +79,10 @@ class Cleaner():
             l_type = self.args.standard_type_log[0].split(',')
             data_log = data[data['Standard Type'].isin(l_type)]
             data_log = data_log_f(l_type ,data_log)
-
         if self.args.standard_type_act != 'None':
             s_type = self.args.standard_type_act[0].split(',')
             data_act = data[data['Standard Type'].isin(s_type)]
             data_act = data_act_f(data_act)
-
         if self.args.standard_type_perc != 'None' and self.args.assay_description_perc != 'None':
             p_type = self.args.standard_type_perc[0].split(',')
             assay_desc = self.args.assay_description_perc[0].split(',')
@@ -147,13 +143,12 @@ class Cleaner():
                     max_len = len(g)
                     max_group = g
             if max_group is not None:
-            # Calcola la mediana esclusi gli estremi
                 sorted_values = max_group["Standard Value"].sort_values()
                 if len(sorted_values) > 2:
                     trimmed_values = sorted_values.iloc[1:-1]  
                     median_idx = (trimmed_values - trimmed_values.median()).abs().idxmin() 
                 else:
-                    median_idx = sorted_values.idxmin()  # Se meno di 3 elementi, usa il minimo
+                    median_idx = sorted_values.idxmin() 
                 indexes.append(median_idx)
 
         filter_data = duplicate_data.loc[indexes]
@@ -210,17 +205,17 @@ class Cleaner():
         df_perc_rev_inact['Class'] = 0
         df_perc_rev_act = df_perc_act.copy()
         df_perc_rev_act['Class'] = 1
-##attivi
+
         df_act_act = df_act[df_act['Standard Value'] <= self.args.thr_act]
         df_act_rev_act = df_act_act.copy()
         if not df_act_rev_act.empty:
             df_act_rev_act.loc[:, 'Class'] = 1
-#inattivi
+
         df_act_inact = df_act[df_act['Standard Value'] >= self.args.thr_act*10]
         df_act_rev_inact = df_act_inact.copy()
         if not df_act_rev_inact.empty:
             df_act_rev_inact.loc[:,'Class'] = 0
-#incerti
+
         df_act_inc = df_act.loc[(df_act['Standard Value'] > self.args.thr_act) & (df_act['Standard Value'] < self.args.thr_act * 10)]
         df_act_rev_inc = df_act_inc.copy()
         if not df_act_rev_inc.empty:

@@ -48,7 +48,7 @@ def file_args(parser: ArgumentParser) -> None:
     parser.add_argument('--path_output', type = str, default = '/home/luca/LAB/LAB_federica/', 
                         help = 'Specify the path where to save the output file')
     parser.add_argument('--path_assay',type=str, default='/home/federica/LAB2/assays.csv', help='Specify the name of the assay file with confidence informations')
-    parser.add_argument('--path_proteinfamily', type=str, default='/home/federica/LAB2/family_protein_with_formatted.csv', 
+    parser.add_argument('--path_proteinfamily', type=str, default='/home/federica/LAB2/family_protein_with_formatted_all.csv', 
                         help='Specify the path of the protein family classification file')
     # Add arguments for mutational analysis
     parser.add_argument('--mutation', type = bool, default = False, help = 'Specify if the mutation is needed')
@@ -77,7 +77,6 @@ def qsar_args(parser: ArgumentParser) -> None:
     """
     parser.add_argument('--path_qsar', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/', 
                         help='Specify the path of the directory where to save the QSAR results')
-    parser.add_argument('--model', type=str, choices=['rf_regressor','svr_regressor','all'], required=True, help='Type of model to train')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     
     parser.add_argument('--n_estimators', type=int, default=100, help='Number of trees for the Random Forest model')
