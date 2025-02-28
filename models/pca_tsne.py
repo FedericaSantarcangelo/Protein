@@ -88,7 +88,7 @@ class DimensionalityReducer:
         select_best_model()
         scaled_X, scaled_y = allign(self, X_train, X_test)
         trainer.retrain_best_model(scaled_X, y_train, scaled_y, y_test)
-        trainer.test_model(scaled_y, y_test)
+        trainer.test_model(scaled_y, y_test, )
 
     
     def save_reduced_data(self, reduced_data, data, scaler_name):

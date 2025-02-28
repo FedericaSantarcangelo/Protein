@@ -43,7 +43,6 @@ class QSARModelTrainer:
                 'model': best_model,
                 'params': best_params
             }
-
             model_path = os.path.join(self.result_dir, f'file_pkl/{model_name}_{component}.pkl')
             with open(model_path, 'wb') as f:
                 pickle.dump(model_config, f)

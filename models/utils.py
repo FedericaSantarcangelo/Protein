@@ -135,46 +135,39 @@ def preprocess_and_pca(scaled_X_train_f, feature_X_train_f, scaled_Y_train_f, fe
     np.save("/home/federica/LAB2/chembl1865/egfr_qsar/qsar_results/selected_features.npy", feature_X_train_f)
     return scaled_X_train_f, feature_X_train_f, scaled_Y_train_f, feature_Y_train_f
 
-def smiles_to_ecfp4(smiles_list, radius=2, n_bits=1024):
-    """Convert SMILES to ECFP4 fingerprints."""
-    fingerprints = []
-    for smi in smiles_list:
-        mol = Chem.MolFromSmiles(smi)
-        if mol:
-            fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=n_bits)
-            arr = np.zeros((1,), dtype=np.int8)
-            DataStructs.ConvertToNumpyArray(fp, arr)
-            fingerprints.append(arr)
-        else:
-            fingerprints.append(np.zeros((n_bits,), dtype=np.int8))  # Placeholder for invalid SMILES
-    return np.array(fingerprints)
+def bin_random_split(df_x: pd.DataFrame, df_y: pd.DataFrame, test_size = 0.3, random_state=42) -> pd.DataFrame:
+    """
+    Split data into train and test sets 
+    """
+    x_train, x_test = train_test_split(df_x, test_size=test_size, random_state=random_state)
+    y_train, y_test = train_test_split(df_y, test_size=test_size, random_state=random_state)
 
-def bin_random_split(data: pd.DataFrame, eps=0.5, min_samples=5, train_ratio=0.6):
-    """Split data into train and test sets based on DBSCAN clustering and activity stratification."""
+    train_set = pd.concat([x_train, y_train], ignore_index=True)
+    test_set = pd.concat([x_test, y_test], ignore_index=True)
+    return train_set, test_set
 
-    fingerprints = smiles_to_ecfp4(data['Smiles'].tolist())
-    scaler = StandardScaler()
-    data['standard_value_scaled'] = scaler.fit_transform(data[['Standard Value']])
-    dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric='euclidean')
-    data['cluster'] = dbscan.fit_predict(fingerprints)
-    train_idx, test_idx = [], []
-    for cluster in np.unique(data['cluster']):
-        cluster_data = data[data['cluster'] == cluster]
-        if len(cluster_data) > 1: 
-            try:
-                train_sub, test_sub = train_test_split(
-                    cluster_data, train_size=train_ratio, random_state=42, stratify=cluster_data[['standard_value_scaled']]
-                )
-            except ValueError: 
-                train_sub, test_sub = train_test_split(
-                    cluster_data, train_size=train_ratio, random_state=42
-                )
-            train_idx.extend(train_sub.index.tolist())
-            test_idx.extend(test_sub.index.tolist())
-        else:
-            train_idx.extend(cluster_data.index.tolist())
-
-    train = data.loc[train_idx].drop(columns=['cluster', 'standard_value_scaled'])
-    test = data.loc[test_idx].drop(columns=['cluster', 'standard_value_scaled'])
+def calculate_tanimoto_similarity(smiles_list1, smiles_list2):
+    """
+    Calcola la similarità di Tanimoto tra due liste di SMILES.
+    """
+    fps1 = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(s), 2) for s in smiles_list1 if Chem.MolFromSmiles(s)]
+    fps2 = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(s), 2) for s in smiles_list2 if Chem.MolFromSmiles(s)]
     
-    return train, test
+    similarities = []
+    for fp1 in fps1:
+        for fp2 in fps2:
+            sim = DataStructs.TanimotoSimilarity(fp1, fp2)
+            similarities.append(sim)
+    
+    avg_similarity = sum(similarities) / len(similarities) if similarities else 0
+    return avg_similarity
+
+def check_train_test_similarity(train_set, test_set):
+    """
+    Verifica la similarità media tra train e test set.
+    """
+    smiles_train = train_set['Smiles'].dropna().tolist()
+    smiles_test = test_set['Smiles'].dropna().tolist()
+    similarity = calculate_tanimoto_similarity(smiles_train, smiles_test)
+    print(f"Similarità media Train-Test (Tanimoto): {similarity:.4f}")
+    return similarity
