@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from utils.file_utils import competence
+from sklearn.model_selection import train_test_split
 
 aminoacids = {
     'Ala': 'A', 'Arg': 'R', 'Asn': 'N', 'Asp': 'D', 'Cys': 'C', 'Gln': 'Q', 'Glu': 'E',
@@ -182,3 +183,4 @@ def select_optimal_clusters(inertia_scores, silhouette_scores):
     combined_scores = normalized_silhouette_scores + normalized_inertia_scores
     optimal_clusters = combined_scores.argmax() + 2
     return optimal_clusters
+

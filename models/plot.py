@@ -113,15 +113,7 @@ def create_individual_variance_plot(explained_variance, result_dir, scaler_name)
     plt.tight_layout()
     plt.savefig(os.path.join(result_dir, f'{scaler_name}_explained_variance.png'), bbox_inches='tight')
     plt.close()
-
-def find_intersection(r2_scores, q2_scores):
-    """Find the intersection point of R2 and Q2 scores."""
-    for i in range(1, len(r2_scores)):
-        if (r2_scores[i-1] <= q2_scores[i-1] and r2_scores[i] >= q2_scores[i]) or (r2_scores[i-1] >= q2_scores[i-1] and r2_scores[i] <= q2_scores[i]):
-            return i
-    return len(r2_scores)
-
-
+    
 def plot_results(results_df, result_dir, filename='model_scores.png'):
     """
     Plot dei risultati (R² e Q²) per ciascun modello e salva l'immagine.
