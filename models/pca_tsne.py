@@ -47,7 +47,7 @@ class DimensionalityReducer:
     def fit_transform(self, X_train, y_train, X_test, y_test):
         """Fit and transform the data using PCA, regression, clustering, and t-SNE."""
 
-        X_train_f, Y_train_f, X_test_f, Y_test_f = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+        X_train_f, Y_train_f, X_test_f, Y_test_f = train_test_split(X_train, y_train, test_size=0.3, random_state=42)
         X_train_f['ID'] = np.arange(len(X_train_f))
         Y_train_f['ID'] = np.arange(len(Y_train_f))
         scaled_X_train_f = self.scaler.fit_transform(X_train_f)

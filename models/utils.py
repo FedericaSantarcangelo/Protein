@@ -8,13 +8,12 @@ from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor, GradientB
 from sklearn.neural_network import MLPRegressor
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.preprocessing import StandardScaler
 from xgboost import XGBRegressor
 from rdkit import Chem
-from rdkit.Chem import AllChem, DataStructs 
-from sklearn.cluster import DBSCAN
+from rdkit.Chem import AllChem, DataStructs
+from sklearn.model_selection import train_test_split 
 from dataset.processing import remove_highly_correlated_features, remove_zero_variance_features
-from sklearn.model_selection import train_test_split
+
 
 models = {
     'Random Forest': (
@@ -135,16 +134,6 @@ def preprocess_and_pca(scaled_X_train_f, feature_X_train_f, scaled_Y_train_f, fe
     np.save("/home/federica/LAB2/chembl1865/egfr_qsar/qsar_results/selected_features.npy", feature_X_train_f)
     return scaled_X_train_f, feature_X_train_f, scaled_Y_train_f, feature_Y_train_f
 
-def bin_random_split(df_x: pd.DataFrame, df_y: pd.DataFrame, test_size = 0.3, random_state=42) -> pd.DataFrame:
-    """
-    Split data into train and test sets 
-    """
-    x_train, x_test = train_test_split(df_x, test_size=test_size, random_state=random_state)
-    y_train, y_test = train_test_split(df_y, test_size=test_size, random_state=random_state)
-
-    train_set = pd.concat([x_train, y_train], ignore_index=True)
-    test_set = pd.concat([x_test, y_test], ignore_index=True)
-    return train_set, test_set
 
 def calculate_tanimoto_similarity(smiles_list1, smiles_list2):
     """
@@ -161,6 +150,16 @@ def calculate_tanimoto_similarity(smiles_list1, smiles_list2):
     
     avg_similarity = sum(similarities) / len(similarities) if similarities else 0
     return avg_similarity
+def split_train_test(df_x, df_y):
+    df_total = pd.concat([df_x, df_y]).reset_index(drop=True)
+
+    df_total['Log_Bins'] = pd.qcut(df_total['Log Standard Value'], q=4, labels=False, duplicates='drop')
+    print(df_total['Log_Bins'].value_counts())
+    df_total['Log_Bins'] = pd.cut(df_total['Log Standard Value'], bins=5, labels=False)
+    df_x, df_y = train_test_split(df_total, test_size=0.3, stratify=df_total['Log_Bins'], random_state=42)
+    df_x = df_x.drop(columns=['Log_Bins'])
+    df_y = df_y.drop(columns=['Log_Bins'])
+    return df_x, df_y
 
 def check_train_test_similarity(train_set, test_set):
     """

@@ -13,7 +13,7 @@ import pandas as pd
 from datetime import datetime
 from dataset.preparation import Cleaner
 from models.pca_tsne import DimensionalityReducer
-from models.utils import bin_random_split, check_train_test_similarity
+from models.utils import check_train_test_similarity,split_train_test
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.data_handling import prepare_data
 from utils.args import data_cleaning_args, file_args, reducer_args, qsar_args
@@ -70,8 +70,8 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
 
     df_x = process_molecules_and_calculate_descriptors(df_x)
     df_x = prepare_data(df_x)
-
-    df_x,df_y=bin_random_split(df_x,df_y)
+    
+    df_x,df_y = split_train_test(df_x, df_y)
     check_train_test_similarity(df_x, df_y)
     df_x.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/x.csv", index=False)
     df_y.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/y.csv", index=False)
