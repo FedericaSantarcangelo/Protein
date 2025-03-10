@@ -30,7 +30,7 @@ def parser_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Data Cleaning')
     file_args(parser)
     data_cleaning_args(parser)
-    parser.add_argument('--path_db', type=str, default='/home/federica/LAB2/chembl35/chembl35_20250219',
+    parser.add_argument('--path_db', type=str, default='/home/federica/LAB2/chebml203_35.csv',
                         help='Specify the path of the database')
     reducer_args(parser)
     parser.add_argument('--qsar_pilot', action='store_true', help='Run QSAR Pilot analysis with predefined molecules')
@@ -75,6 +75,8 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     check_train_test_similarity(df_x, df_y)
     df_x.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/x.csv", index=False)
     df_y.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/y.csv", index=False)
+
+    df_y = df_y[~df_y['Molecule ChEMBL ID'].isin(['CHEMBL5185772', 'CHEMBL5174232'])]
     
     numerical_data_y = df_y.select_dtypes(include=[np.number])
     numerical_data_y = numerical_data_y.drop(columns=['Standard Value', 'Log Standard Value'])
