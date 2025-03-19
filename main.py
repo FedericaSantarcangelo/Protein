@@ -30,7 +30,7 @@ def parser_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Data Cleaning')
     file_args(parser)
     data_cleaning_args(parser)
-    parser.add_argument('--path_db', type=str, default='/home/federica/LAB2/chebml203_35.csv',
+    parser.add_argument('--path_db', type=str, default='/home/federica/LAB2/chembl35/chembl203_35.csv',
                         help='Specify the path of the database')
     reducer_args(parser)
     parser.add_argument('--qsar_pilot', action='store_true', help='Run QSAR Pilot analysis with predefined molecules')
@@ -62,10 +62,15 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     Run the QSAR pilot study
     """
     df_x = pd.read_csv(input_file)
-    df_y = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/41molecule.csv")
+    df_y = pd.read_csv("/home/federica/LAB2/chembl1865/egfr_qsar/class_1.csv")
+    mol = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/95molecule.csv")
     df_y = calculate_similarity_scores(df_y)
     
     df_y = process_molecules_and_calculate_descriptors(df_y)
+    val = mol[mol['Molecule ChEMBL ID'] == 'CHEMBL5555555']
+    columns_to_drop = ['Smiles (RDKit Mol)', 'Document ChEMBL ID']
+    val = val.drop(columns=columns_to_drop)
+    val.loc[:, 'Log Standard Value'] = -np.log10((val['Standard Value']/1e9))
     df_y = prepare_data(df_y)
 
     df_x = process_molecules_and_calculate_descriptors(df_x)
@@ -73,10 +78,13 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     
     df_x,df_y = split_train_test(df_x, df_y)
     check_train_test_similarity(df_x, df_y)
+
     df_x.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/x.csv", index=False)
+    df_y = pd.concat([df_y, val], ignore_index=True)
+
     df_y.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/y.csv", index=False)
 
-    df_y = df_y[~df_y['Molecule ChEMBL ID'].isin(['CHEMBL5185772', 'CHEMBL5174232'])]
+    #df_y = df_y[~df_y['Molecule ChEMBL ID'].isin(['CHEMBL5185772', 'CHEMBL5174232'])]
     
     numerical_data_y = df_y.select_dtypes(include=[np.number])
     numerical_data_y = numerical_data_y.drop(columns=['Standard Value', 'Log Standard Value'])

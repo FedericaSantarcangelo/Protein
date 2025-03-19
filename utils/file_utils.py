@@ -38,7 +38,7 @@ def drop_columns(df: pd.DataFrame) -> pd.DataFrame:
     Drop the columns from the dataframe
     :return: the dataframe without the columns
     """
-    return df.drop(columns=['Molecule Name','Molecular Weight','#RO5 Violations','AlogP','Comment','Uo Units','Ligand Efficiency BEI',
+    return df.drop(columns=['Molecular Weight','#RO5 Violations','AlogP','Comment','Uo Units','Ligand Efficiency BEI',
                             'Ligand Efficiency LE','Ligand Efficiency LLE','Ligand Efficiency SEI',
                             'BAO Format ID','Assay Tissue ChEMBL ID','Assay Tissue Name',
                             'Assay Subcellular Fraction','Assay Parameters','Assay Variant Accession','Source ID',

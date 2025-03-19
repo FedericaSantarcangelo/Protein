@@ -43,6 +43,8 @@ class QSARModelTrainer:
                 'model': best_model,
                 'params': best_params
             }
+            if not os.path.exists(os.path.join(self.result_dir, 'file_pkl')):
+                os.makedirs(os.path.join(self.result_dir, 'file_pkl'))
             model_path = os.path.join(self.result_dir, f'file_pkl/{model_name}_{component}.pkl')
             with open(model_path, 'wb') as f:
                 pickle.dump(model_config, f)
@@ -58,6 +60,8 @@ class QSARModelTrainer:
         'y_test': y_test,
         'y_pred': y_pred
         })
+        if not os.path.exists(os.path.join(self.result_dir, 'predictions')):
+            os.makedirs(os.path.join(self.result_dir, 'predictions'))
         pred_path = os.path.join(self.result_dir, f'predictions/{model_name}_{component}_predictions_train.csv')
         os.makedirs(os.path.dirname(pred_path), exist_ok=True) 
         pred_results.to_csv(pred_path, index=False)
