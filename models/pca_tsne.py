@@ -14,7 +14,7 @@ from models.qsar_models import QSARModelTrainer
 
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from sklearn.model_selection import train_test_split
-
+from dataset.processing import delete_feature
 from utils.data_handling import select_optimal_clusters
 from models.plot import plot_similarity_matrix, save_loading_scores, create_cumulative_variance_plot, create_individual_variance_plot
 from models.plot import elbow, silhouette, plot_kmeans_clusters, plot_tsne, save_cluster_labels
@@ -64,7 +64,7 @@ class DimensionalityReducer:
         pca_scaled_Y_train_f = self.pca.transform(scaled_Y_train_f)
         explained_variance_ratio = self.pca.explained_variance_ratio_
         cumulative_variance = np.cumsum(explained_variance_ratio)
-        optimal_pca_components = np.argmax(cumulative_variance > 0.99) + 1
+        optimal_pca_components = np.argmax(cumulative_variance > 0.85) + 1
         pca_scaled_X_train_f = pca_scaled_X_train_f[:, :optimal_pca_components]
         pca_scaled_Y_train_f = pca_scaled_Y_train_f[:, :optimal_pca_components]
         
@@ -84,8 +84,9 @@ class DimensionalityReducer:
             reduced_data_X_train_f = pca_scaled_X_train_f[:, :component]
             reduced_data_Y_train_f = pca_scaled_Y_train_f[:, :component]
             trainer.train_and_evaluate(reduced_data_X_train_f, X_test_f, reduced_data_Y_train_f, Y_test_f, component)
-
         select_best_model()
+
+        #to_keep = delete_feature(self.args.path_qsar, loading_score, feature_X_train_f)
         scaled_X, scaled_y = allign(self, X_train, X_test)
         trainer.retrain_best_model(scaled_X, y_train, scaled_y, y_test)
         trainer.test_model(scaled_y, y_test)
@@ -113,8 +114,10 @@ class DimensionalityReducer:
 
     def perform_tsne(self, data, labels):
         """Perform t-SNE and save the results."""
+        n_samples = data.shape[0]
+        perplexity = min(self.args.perplexity, n_samples - 1)
         n_components = min(self.args.n_components_tsne, data.shape[1])
-        tsne = TSNE(n_components=n_components, perplexity=self.args.perplexity,
+        tsne = TSNE(n_components=n_components,perplexity=perplexity,
                     learning_rate=self.args.lr_tsne, max_iter=self.args.n_iter, random_state=self.args.seed)
         tsne_results = tsne.fit_transform(data)
         tsne_df = pd.DataFrame(tsne_results, columns=[f'TSNE{i+1}' for i in range(tsne_results.shape[1])])

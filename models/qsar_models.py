@@ -11,6 +11,7 @@ from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from models.utils import models
 
 
+
 class QSARModelTrainer:
     def __init__(self, args):
         self.args = args
@@ -67,7 +68,7 @@ class QSARModelTrainer:
         pred_results.to_csv(pred_path, index=False)
         results = {
             'Model': model_name,
-            'PC': component, #
+            'PC': component, 
             'MSE': mse,
             'R2': r2,
             'Q2': q2,
@@ -105,6 +106,7 @@ class QSARModelTrainer:
                     best_params = model_config['params']
             else:
                 raise FileNotFoundError(f"Pre-trained model not found at {model_path}")
+            
             model.set_params(**best_params)
             model.fit(X_train_subset, y_train)
             y_train_pred = model.predict(X_train_subset)

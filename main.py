@@ -16,6 +16,7 @@ from models.pca_tsne import DimensionalityReducer
 from models.utils import check_train_test_similarity,split_train_test
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.data_handling import prepare_data
+from sklearn.model_selection import train_test_split 
 from utils.args import data_cleaning_args, file_args, reducer_args, qsar_args
 from utils.file_utils import load_file, process_directory, drop_columns, add_protein_family, calculate_similarity_scores
 
@@ -61,38 +62,29 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     """
     Run the QSAR pilot study
     """
-    df_x = pd.read_csv(input_file)
-    df_y = pd.read_csv("/home/federica/LAB2/chembl1865/egfr_qsar/class_1.csv")
-    mol = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/95molecule.csv")
-    df_y = calculate_similarity_scores(df_y)
-    
-    df_y = process_molecules_and_calculate_descriptors(df_y)
-    val = mol[mol['Molecule ChEMBL ID'] == 'CHEMBL5555555']
-    columns_to_drop = ['Smiles (RDKit Mol)', 'Document ChEMBL ID']
-    val = val.drop(columns=columns_to_drop)
-    val.loc[:, 'Log Standard Value'] = -np.log10((val['Standard Value']/1e9))
-    df_y = prepare_data(df_y)
-
-    df_x = process_molecules_and_calculate_descriptors(df_x)
-    df_x = prepare_data(df_x)
-    
-    df_x,df_y = split_train_test(df_x, df_y)
-    check_train_test_similarity(df_x, df_y)
-
-    df_x.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/x.csv", index=False)
-    df_y = pd.concat([df_y, val], ignore_index=True)
-
-    df_y.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/y.csv", index=False)
-
-    #df_y = df_y[~df_y['Molecule ChEMBL ID'].isin(['CHEMBL5185772', 'CHEMBL5174232'])]
-    
+    #df_x = pd.read_csv(input_file)
+    #df_y = pd.read_csv("/home/federica/LAB2/chembl1865/egfr_qsar/intorno.csv")
+    #if 'MACCS_sim_score' not in df_x.columns: 
+        #df_x = calculate_similarity_scores(df_x)
+    #if 'MACCS_sim_score' not in df_y.columns: 
+        #df_y = calculate_similarity_scores(df_y)
+    #df_y = process_molecules_and_calculate_descriptors(df_y)
+    #df_y = prepare_data(df_y)
+    #df_x = process_molecules_and_calculate_descriptors(df_x)
+    #df_x = prepare_data(df_x)  
+    #df_x,df_y = split_train_test(df_x, df_y)
+    #df_x,df_y = train_test_split(df_x, test_size=0.3, random_state=42)
+    #check_train_test_similarity(df_x, df_y)
+    #df_x.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/x.csv", index=False)
+    #df_y.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/y.csv", index=False)
+    df_x = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/x.csv")
+    df_y = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/y.csv")
     numerical_data_y = df_y.select_dtypes(include=[np.number])
     numerical_data_y = numerical_data_y.drop(columns=['Standard Value', 'Log Standard Value'])
     numerical_data_y = numerical_data_y.fillna(0)
     numerical_data_x = df_x.select_dtypes(include=[np.number])
     numerical_data_x = numerical_data_x.fillna(0)
     numerical_data_x = numerical_data_x.drop(columns=['Standard Value', 'Log Standard Value'])
-
     reducer = DimensionalityReducer(args)
     reducer.fit_transform(numerical_data_x, df_x['Log Standard Value'], numerical_data_y,df_y['Log Standard Value'])
     return 1

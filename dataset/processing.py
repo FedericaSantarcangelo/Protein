@@ -4,19 +4,18 @@
 
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
-
+from scipy.stats import pearsonr
 from rdkit import Chem
 from rdkit.Chem import Descriptors, Descriptors3D
 from rdkit.Chem.SaltRemover import SaltRemover
 from mordred import Calculator, descriptors
 import pandas as pd
 import numpy as np
-
+import os
 exclude_descriptors = ['rdkit_Ipc','BCUT2D_MWHI', 'BCUT2D_MWLOW', 'BCUT2D_CHGHI', 'BCUT2D_CHGLO', 'BCUT2D_LOGPHI', 'BCUT2D_LOGPLOW', 'BCUT2D_MRHI', 'BCUT2D_MRLOW']
 mordred_calculator = Calculator(descriptors, ignore_3D=False)
 rdkit_descriptor_names = [name for name, func in Descriptors._descList if name not in exclude_descriptors]
 descriptor_functions_3d = {name: func for name, func in Descriptors3D.__dict__.items() if callable(func) and not name.startswith('_')}
-
 def prepare_molecule(smiles): 
     """
     Prepare a molecule for descriptor calculation
@@ -120,10 +119,40 @@ def remove_highly_correlated_features(data, feature_names, threshold=0.95):
     :return: the dataframe without highly correlated features
     """
     correlation_matrix = np.corrcoef(data, rowvar=False)
-    upper_triangular = np.triu(np.ones(correlation_matrix.shape), k=1)
     to_drop = set()
     for i in range(correlation_matrix.shape[0]):
         for j in range(i+1, correlation_matrix.shape[1]):
             if abs(correlation_matrix[i, j]) > threshold:
                 to_drop.add(j)
     return np.delete(data, list(to_drop), axis=1), [name for i, name in enumerate(feature_names) if i not in to_drop]
+
+def delete_feature(path, loading_score,feature_names):
+    """
+    Delete features higly correlated with the absolute error
+    :return: the dataframe without highly correlated features
+    """
+    best_model_info_df = pd.read_csv(os.path.join(path, 'best_model.csv'))
+    to_keep = []
+    for _, best_model_info in best_model_info_df.iterrows():
+        model_name = best_model_info['Model']
+        component = best_model_info['PC']
+        pred_path = os.path.join(path, f'predictions/{model_name}_{component}_predictions_train.csv')
+        if not os.path.exists(pred_path):
+            raise FileNotFoundError(f"Predictions not found at {pred_path}")
+        pred_df = pd.read_csv(pred_path)
+        if 'y_pred' not in pred_df.columns and 'y_test' not in pred_df.columns:
+            raise ValueError("Predictions file must contain 'y_pred' and 'y_test' column")
+        y_test = pred_df['y_test'].values
+        y_pred = pred_df['y_pred'].values
+        abs_error = np.abs(y_test - y_pred)
+        pca_scores = loading_score.iloc[:, 1:].values  
+        correlation = {}
+        if len(abs_error) <= pca_scores.shape[0]:  # Ensure pca_scores has enough rows
+            pca_scores = pca_scores[:len(abs_error), :]  # Select the first len(abs_error) rows
+            for i, feature in range(1, len(abs_error)):
+                corr, _ = pearsonr(abs_error, pca_scores[:, i])
+                correlation[feature] = corr
+            to_keep = [feature for feature, corr in correlation.items() if abs(corr) < 0.5]
+        else:
+            raise ValueError("Length of abs_error is greater than the number of rows in pca_scores")
+        return to_keep
