@@ -75,7 +75,7 @@ def qsar_args(parser: ArgumentParser) -> None:
     Add arguments for QSAR analysis
     :param parser: the parser istance
     """
-    parser.add_argument('--path_qsar', type=str, default='/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/', 
+    parser.add_argument('--path_qsar', type=str, default='/home/federica/LAB2/egfr_qsar/qsar_results/', 
                         help='Specify the path of the directory where to save the QSAR results')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     

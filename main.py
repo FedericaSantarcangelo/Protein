@@ -63,7 +63,7 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     Run the QSAR pilot study
     """
     #df_x = pd.read_csv(input_file)
-    #df_y = pd.read_csv("/home/federica/LAB2/chembl1865/egfr_qsar/intorno.csv")
+    #df_y = pd.read_csv("/home/federica/LAB2/egfr_qsar/intorno.csv")
     #if 'MACCS_sim_score' not in df_x.columns: 
         #df_x = calculate_similarity_scores(df_x)
     #if 'MACCS_sim_score' not in df_y.columns: 
@@ -75,10 +75,10 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     #df_x,df_y = split_train_test(df_x, df_y)
     #df_x,df_y = train_test_split(df_x, test_size=0.3, random_state=42)
     #check_train_test_similarity(df_x, df_y)
-    #df_x.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/x.csv", index=False)
-    #df_y.to_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/y.csv", index=False)
-    df_x = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/x.csv")
-    df_y = pd.read_csv("/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/qsar_results/y.csv")
+    #df_x.to_csv("/home/federica/LAB2/egfr_qsar/qsar_results/x.csv", index=False)
+    #df_y.to_csv("/home/federica/LAB2/egfr_qsar/qsar_results/y.csv", index=False)
+    df_x = pd.read_csv("/home/federica/LAB2/egfr_qsar/qsar_results/x.csv")
+    df_y = pd.read_csv("/home/federica/LAB2/egfr_qsar/qsar_results/y.csv")
     numerical_data_y = df_y.select_dtypes(include=[np.number])
     numerical_data_y = numerical_data_y.drop(columns=['Standard Value', 'Log Standard Value'])
     numerical_data_y = numerical_data_y.fillna(0)

@@ -68,7 +68,7 @@ def allign(self,X_train, X_test):
     """ 
     Allign train and test set for retrain models
     """
-    selected_features = np.load("/home/federica/LAB2/chembl1865/egfr_qsar/qsar_results/selected_features.npy")
+    selected_features = np.load("/home/federica/LAB2/egfr_qsar/qsar_results/selected_features.npy")
     #selected_features = [feature for feature in selected_features if feature in to_keep]
     X_train_s = X_train.copy()
     X_test_s = X_test.copy()
@@ -84,7 +84,7 @@ def allign(self,X_train, X_test):
     pca_scaled_X_test = self.pca.transform(scaled_X_test)    
     return pca_scaled_X_train, pca_scaled_X_test
 
-def select_best_model(dir='/home/federica/LAB2/chembl1865/egfr_qsar/qsar_results'):
+def select_best_model(dir='/home/federica/LAB2/egfr_qsar/qsar_results'):
     """
     Select the best model based on the highest Q2 score
     """
@@ -134,7 +134,7 @@ def preprocess_and_pca(scaled_X_train_f, feature_X_train_f, scaled_Y_train_f, fe
     scaled_Y_train_f = scaled_Y_train_f[:, feature_mask_Y_train_f]
     feature_X_train_f = np.array(feature_X_train_f)[feature_mask_X_train_f]
     feature_Y_train_f = np.array(feature_Y_train_f)[feature_mask_Y_train_f]
-    np.save("/home/federica/LAB2/chembl1865/egfr_qsar/qsar_results/selected_features.npy", feature_X_train_f)
+    np.save("/home/federica/LAB2/egfr_qsar/qsar_results/selected_features.npy", feature_X_train_f)
     return scaled_X_train_f, feature_X_train_f, scaled_Y_train_f, feature_Y_train_f
 
 def calculate_tanimoto_similarity(smiles_list1, smiles_list2):
