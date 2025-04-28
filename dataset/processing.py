@@ -99,7 +99,7 @@ def process_molecules_and_calculate_descriptors(df):
     descriptors_df = pd.concat([descriptors_df.drop(['Descriptors'], axis=1), descriptors_df['Descriptors'].apply(pd.Series)], axis=1)
     descriptors_df.columns = ['Molecule ChEMBL ID'] + descriptor_cols
     merged_df = pd.merge(df, descriptors_df, on='Molecule ChEMBL ID', how='left')
-    merged_df.to_csv('/home/luca/LAB/LAB_federica/chembl1865/egfr_qsar/final_df.csv', index=False, encoding='utf-8')
+    merged_df.to_csv('/home/luca/LAB/LAB_federica/egfr_qsar/final_df.csv', index=False, encoding='utf-8')
     return merged_df
 
 def remove_zero_variance_features(data, feature_names):

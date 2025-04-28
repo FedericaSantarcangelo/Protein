@@ -64,7 +64,7 @@ class DimensionalityReducer:
         pca_scaled_Y_train_f = self.pca.transform(scaled_Y_train_f)
         explained_variance_ratio = self.pca.explained_variance_ratio_
         cumulative_variance = np.cumsum(explained_variance_ratio)
-        optimal_pca_components = np.argmax(cumulative_variance > 0.85) + 1
+        optimal_pca_components = np.argmax(cumulative_variance > 0.99) + 1
         pca_scaled_X_train_f = pca_scaled_X_train_f[:, :optimal_pca_components]
         pca_scaled_Y_train_f = pca_scaled_Y_train_f[:, :optimal_pca_components]
         
@@ -85,8 +85,6 @@ class DimensionalityReducer:
             reduced_data_Y_train_f = pca_scaled_Y_train_f[:, :component]
             trainer.train_and_evaluate(reduced_data_X_train_f, X_test_f, reduced_data_Y_train_f, Y_test_f, component)
         select_best_model()
-
-        #to_keep = delete_feature(self.args.path_qsar, loading_score, feature_X_train_f)
         scaled_X, scaled_y = allign(self, X_train, X_test)
         trainer.retrain_best_model(scaled_X, y_train, scaled_y, y_test)
         trainer.test_model(scaled_y, y_test)
