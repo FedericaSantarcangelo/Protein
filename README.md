@@ -47,5 +47,22 @@ It has the following structure (columns nay vary slightly depending on configura
 - **Standard Units**: unit of measurement (e.g. nM)
 - **Document ChEMBL ID**: reference document ID
 - **Smiles**: canonical SMILES (string representation of the molecule)
-
 **Note**: If any of the similarity columns (*_sim_score) are missing, the training script will automatically compute them using the Smiles column.
+
+### Model Selection and Training Pipeline
+Once the dataset is prepared, the training pipeline follows these steps:
+1. Dimensionality Reduction (PCA): Principal Component Analysis is applied to reduce feature dimensionality and improve model efficiency.
+2. Hyperparameter Tuning: for each model, a grid search is performed using GridSearchCV to find the best configuration. The scoring metric depends on the task (e.g., RMSE, MAE, or R²).
+3. Model Retraining: after the best configuration is found, the model is retrained on the full training set using the optimal hyperparameters.
+4. Final Testing: the retrained model is evaluated on a held-out test set to assess generalization.
+
+### Supported Models
+The following regression models are supported in the training pipeline:
+- Random Forest Regressor
+- AdaBoost Regressor
+- Gradient Boosting Regressor
+- Multi-layer Perceptron (MLP)
+- Support Vector Regressor (SVR)
+- K-Nearest Neighbors Regressor (KNN)
+- XGBoost Regressor
+Each model is trained and optimized independently using its own hyperparameter grid.
