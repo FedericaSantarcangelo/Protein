@@ -1,7 +1,6 @@
 """Script to train and evaluate QSAR models
 @Author: Federica Santarcangelo
 """
-
 import os
 import pickle
 import pandas as pd
@@ -9,8 +8,6 @@ import numpy as np
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from models.utils import models
-
-
 
 class QSARModelTrainer:
     def __init__(self, args):

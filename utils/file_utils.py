@@ -1,4 +1,6 @@
-"""script to manage files and data cleaning"""
+"""
+@Author: Federica Santarcangelo
+"""
 import os 
 import glob
 import pandas as pd

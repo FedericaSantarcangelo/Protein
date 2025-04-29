@@ -1,6 +1,7 @@
+"""
+@Author: Federica Santarcangelo
+"""
 from argparse import Namespace
-import os
-import sys
 import re
 import pandas as pd
 from utils.file_utils import load_file, save_other_files

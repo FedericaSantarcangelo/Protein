@@ -1,3 +1,6 @@
+"""
+@Author: Federica Santarcangelo
+"""
 import os 
 import pandas as pd
 

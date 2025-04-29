@@ -31,3 +31,20 @@ The cleaned data is organized into three categories, each with subfolders for di
 - **Quality 2**: medium confidence, possibly with minor uncertainties.
 - **Quality 3**: lowest confidence, requires additional verification.
 
+## Model Training
+The pipeline supports training of machine learning models using the processed data.
+### Input Format Notice
+**Note**: the input file used for model training is **not** the same as the one produced during the data cleaning phase.
+It has the following structure (columns nay vary slightly depending on configuration):
+**Molecule ChEMBL ID**: unique molecule identifier
+**Smiles (RDKit Mol)**: molecular structure in RDKit Mol format
+**MACCS_sim_score**: similarity score using MACCS keys (optional)
+**ECFP4_sim_score**: similarity score using ECFP4 fingerprints (optional)
+**MCSS_rdkit_sim_score**: similarity score from RDKit's MCSS method (optional)
+**Standard Type**: type of measurement (e.g. IC50, Ki)
+**Standard Relation**: comparator (e.g. '=', '>', '<')
+**Standard Value**: activity value (numeric)
+**Standard Units**: unit of measurement (e.g. nM)
+**Document ChEMBL ID**: reference document ID
+**Smiles**: canonical SMILES (string representation of the molecule)
+# Note: If any of the similarity columns (*_sim_score) are missing, the training script will automatically compute them using the Smiles column.

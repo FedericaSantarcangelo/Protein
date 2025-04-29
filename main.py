@@ -1,6 +1,5 @@
 """ 
 Main module for target cleaning and preparation
-
 @Author: Federica Santarcangelo
 """
 import matplotlib
@@ -16,7 +15,6 @@ from models.pca_tsne import DimensionalityReducer
 from models.utils import check_train_test_similarity,split_train_test
 from dataset.processing import process_molecules_and_calculate_descriptors
 from utils.data_handling import prepare_data
-from sklearn.model_selection import train_test_split 
 from utils.args import data_cleaning_args, file_args, reducer_args, qsar_args
 from utils.file_utils import load_file, process_directory, drop_columns, add_protein_family, calculate_similarity_scores
 
@@ -73,14 +71,11 @@ def run_qsar_pilot(input_file, args) -> pd.DataFrame:
     df_x = process_molecules_and_calculate_descriptors(df_x)
     df_x = prepare_data(df_x)  
     df_x,df_y = split_train_test(df_x, df_y)
-    #df_x,df_y = train_test_split(df_x, test_size=0.3, random_state=42)
-    check_train_test_similarity(df_x, df_y)
-
+    #df_x,df_y = train_test_split(df_x, test_size=0.3, random_state=42) #if the input file is one
+    check_train_test_similarity(df_x, df_y)  #if there are two files
     df_x.to_csv("/home/federica/LAB2/egfr_qsar/qsar_results/x.csv", index=False)
     df_y.to_csv("/home/federica/LAB2/egfr_qsar/qsar_results/y.csv", index=False)
 
-    #df_x = pd.read_csv("/home/federica/LAB2/egfr_qsar/qsar_results/x.csv")
-    #df_y = pd.read_csv("/home/federica/LAB2/egfr_qsar/qsar_results/y.csv")
     numerical_data_y = df_y.select_dtypes(include=[np.number])
     numerical_data_y = numerical_data_y.drop(columns=['Standard Value', 'Log Standard Value'])
     numerical_data_y = numerical_data_y.fillna(0)
