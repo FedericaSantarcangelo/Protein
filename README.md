@@ -34,21 +34,25 @@ The cleaned data is organized into three categories, each with subfolders for di
 ## Model Training
 The pipeline supports training of machine learning models using the processed data.
 ### Input Format Notice
-**Note**: the input file used for model training is **not** the same as the one produced during the data cleaning phase.
-It has the following structure (columns nay vary slightly depending on configuration):
-- **Molecule ChEMBL ID**: unique molecule identifier
-- **Smiles (RDKit Mol)**: molecular structure in RDKit Mol format
-- **MACCS_sim_score**: similarity score using MACCS keys (optional)
-- **ECFP4_sim_score**: similarity score using ECFP4 fingerprints (optional)
-- **MCSS_rdkit_sim_score**: similarity score from RDKit's MCSS method (optional)
-- **Standard Type**: type of measurement (e.g. IC50, Ki)
-- **Standard Relation**: comparator (e.g. '=', '>', '<')
-- **Standard Value**: activity value (numeric)
-- **Standard Units**: unit of measurement (e.g. nM)
-- **Document ChEMBL ID**: reference document ID
-- **Smiles**: canonical SMILES (string representation of the molecule)
 
-**Note**: If any of the similarity columns (*_sim_score) are missing, the training script will automatically compute them using the Smiles column.
+> **Note**: The input file used for model training is **not** the same as the one produced during the data cleaning phase.
+
+Below is the expected structure (columns may vary slightly depending on configuration):
+
+| Column Name               | Description                                                 |
+|---------------------------|-------------------------------------------------------------|
+| Molecule ChEMBL ID        | Unique identifier for each molecule                        |
+| Smiles (RDKit Mol)        | Molecular structure in RDKit Mol format                    |
+| MACCS_sim_score           | Similarity score using MACCS keys (optional)               |
+| ECFP4_sim_score           | Similarity score using ECFP4 fingerprints (optional)       |
+| MCSS_rdkit_sim_score      | Similarity score from RDKit's MCSS method (optional)       |
+| Standard Type             | Measurement type (e.g., IC50, Ki)                          |
+| Standard Relation         | Comparison symbol (e.g., '=', '>', '<')                   |
+| Standard Value            | Activity value (numeric)                                   |
+| Standard Units            | Measurement unit (e.g., nM)                                |
+| Document ChEMBL ID        | Reference document ID from ChEMBL                         |
+| Smiles                    | Canonical SMILES string                                    |
+
 
 ### Model Selection and Training Pipeline
 Once the dataset is prepared, the training pipeline follows these steps:
