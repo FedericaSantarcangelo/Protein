@@ -47,6 +47,7 @@ It has the following structure (columns nay vary slightly depending on configura
 - **Standard Units**: unit of measurement (e.g. nM)
 - **Document ChEMBL ID**: reference document ID
 - **Smiles**: canonical SMILES (string representation of the molecule)
+
 **Note**: If any of the similarity columns (*_sim_score) are missing, the training script will automatically compute them using the Smiles column.
 
 ### Model Selection and Training Pipeline
@@ -65,4 +66,5 @@ The following regression models are supported in the training pipeline:
 - Support Vector Regressor (SVR)
 - K-Nearest Neighbors Regressor (KNN)
 - XGBoost Regressor
+
 Each model is trained and optimized independently using its own hyperparameter grid.
